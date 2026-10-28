@@ -184,6 +184,19 @@ textarea:focus { outline: none; }
 .lean { font-size: 12px; font-weight: 600; white-space: nowrap; }
 .lean.ai, .t-ai { color: var(--ai); } .lean.human, .t-human { color: var(--human); } .lean.mid, .t-mid { color: var(--mid); }
 
+/* Statistik */
+.stat-card { padding: 16px 16px 6px; display: grid; gap: 12px; }
+.stat-top { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.stat-top b { font-size: 34px; font-weight: 700; line-height: 1; font-variant-numeric: tabular-nums; }
+.stat-top span { color: var(--muted); font-size: 15px; }
+.stack { display: flex; height: 12px; border-radius: 6px; overflow: hidden; background: var(--fill); gap: 2px; }
+.stack i { display: block; height: 100%; width: 0; transition: width .8s cubic-bezier(.2,.8,.2,1); }
+.stack .ai { background: var(--hl-ai); box-shadow: inset 0 0 0 1px var(--ai); border-radius: 6px 0 0 6px; }
+.stack .mid { background: var(--hl-mid); box-shadow: inset 0 0 0 1px var(--hl-ai); }
+.stack .human { background: var(--zone-mid); flex: 1; }
+.stat-card + .row::before { left: 16px; }
+.row .sw { flex: none; }
+
 .pill { display: inline-flex; font-size: 12px; font-weight: 600; padding: 3px 9px; border-radius: 999px; width: fit-content; }
 .pill.ai { color: var(--ai); background: var(--hl-mid); }
 .pill.mid { color: var(--mid); background: var(--zone-mid); }
@@ -316,6 +329,18 @@ textarea:focus { outline: none; }
             <div class="row"><span class="grow">Aussagekraft</span><span class="value" id="fact-conf"></span></div>
             <div class="row"><span class="grow">Umfang</span><span class="value" id="fact-size"></span></div>
           </div>
+
+          <p class="section-head">Statistik</p>
+          <div class="group">
+            <div class="stat-card">
+              <div class="stat-top"><b id="stat-marked">0 %</b><span>deines Textes sind markiert</span></div>
+              <div class="stack" aria-hidden="true"><i class="ai" id="stack-ai"></i><i class="mid" id="stack-mid"></i><i class="human"></i></div>
+            </div>
+            <div class="row"><i class="sw ai"></i><span class="grow">KI-typisch</span><span class="value" id="stat-ai"></span></div>
+            <div class="row"><i class="sw mid"></i><span class="grow">teilweise auffällig</span><span class="value" id="stat-mid"></span></div>
+            <div class="row"><i class="sw"></i><span class="grow">unauffällig</span><span class="value" id="stat-human"></span></div>
+          </div>
+          <p class="section-foot">Anteil der Wörter in markierten Sätzen. Das ist nicht der Wert oben: Der bezieht zusätzlich Satzlängen und Floskeln im ganzen Text ein.</p>
 
           <p class="section-head">Dein Text</p>
           <div class="marked-card">
@@ -659,6 +684,17 @@ function renderResult(r) {
   $("fact-size").textContent = `${r.total.toLocaleString("de-DE")} Wörter · ${r.sents.length} Sätze`;
   $("marker").style.left = "0%";
   setTimeout(() => $("marker").style.left = idx + "%", 400);
+
+  // Statistik: Anteil der Wörter je Markierung, auf 100 % abgeglichen.
+  const part = { ai: { w: 0, n: 0 }, mid: { w: 0, n: 0 }, human: { w: 0, n: 0 } };
+  r.sents.forEach(s => { const p = part[level(s.score)]; p.w += s.wc; p.n++; });
+  const pAi = Math.round(part.ai.w / r.total * 100), pMid = Math.round(part.mid.w / r.total * 100);
+  const pct = { ai: pAi, mid: pMid, human: Math.max(0, 100 - pAi - pMid) };
+  const satz = n => `${n} ${n === 1 ? "Satz" : "Sätze"}`;
+  $("stat-marked").textContent = `${pct.ai + pct.mid} %`;
+  ["ai", "mid", "human"].forEach(k => $("stat-" + k).textContent = `${pct[k]} % · ${satz(part[k].n)}`);
+  $("stack-ai").style.width = $("stack-mid").style.width = "0";
+  setTimeout(() => { $("stack-ai").style.width = pct.ai + "%"; $("stack-mid").style.width = pct.mid + "%"; }, 450);
 
   const marked = $("marked"); marked.replaceChildren();
   r.paras.forEach(p => {
