@@ -61,7 +61,7 @@ p { margin: 0; }
   padding-block: 24px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
 .device { position: relative; width: 393px; height: 852px; max-width: 100%; border-radius: 58px; padding: 12px; background: var(--bezel);
   box-shadow: 0 30px 60px -20px rgba(0,0,0,.35); }
-.screen { position: relative; width: 100%; height: 100%; border-radius: 46px; overflow: hidden; background: var(--bg); isolation: isolate; }
+.screen { position: relative; width: 100%; height: 100%; border-radius: 46px; overflow: hidden; overflow: clip; background: var(--bg); isolation: isolate; }
 .caption { font-size: 13px; color: var(--muted); text-align: center; max-width: 393px; }
 .caption strong { color: var(--ink); font-weight: 600; }
 
@@ -272,6 +272,13 @@ ins.ph.gone { font: italic 13px var(--f-ui); color: var(--muted); padding: 0 4px
 .check-row input:checked::after { content: ""; width: 9px; height: 5px; border: 2px solid var(--accent-ink); border-top: 0; border-right: 0; transform: rotate(-45deg) translate(1px, -1px); }
 .check-row input:checked + span { color: var(--muted); text-decoration: line-through; }
 
+/* Lernen */
+.fb { padding: 14px 16px; display: grid; gap: 10px; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip-w { font: 13px var(--f-mono); padding: 3px 8px; border-radius: 6px; background: var(--hl-mid); color: var(--ai); }
+.chip-w.h { background: var(--zone-human); color: var(--human); }
+.ch .sub { margin-bottom: 4px; }
+
 /* Bottom Sheet */
 .backdrop { position: absolute; inset: 0; z-index: 50; background: rgba(0,0,0,.32); opacity: 0; transition: opacity .3s; }
 .backdrop.open { opacity: 1; }
@@ -420,6 +427,10 @@ ins.ph.gone { font: italic 13px var(--f-ui); color: var(--muted); padding: 0 4px
           <div class="group" id="signals"></div>
           <p class="section-foot">In der fertigen App kommen zwei Prüfungen dazu: ein Sprachmodell misst, wie vorhersehbar die Wörter sind, und ein KI-Gutachten begründet die Einschätzung in eigenen Worten.</p>
 
+          <p class="section-head">Hilf Textlupe beim Lernen</p>
+          <div class="group" id="feedback"></div>
+          <p class="section-foot">Bewerte nur, wenn du es sicher weißt, zum Beispiel bei deinem eigenen Text. Falsche Angaben machen die Prüfung schlechter. Gelerntes bleibt auf diesem Gerät.</p>
+
           <p class="section-head">So liest du das Ergebnis</p>
           <div class="info-card">
             <p class="info-text">Kein Programm erkennt KI-Texte sicher. Nutze das Ergebnis nicht, um jemandem Betrug vorzuwerfen.</p>
@@ -486,7 +497,11 @@ ins.ph.gone { font: italic 13px var(--f-ui); color: var(--muted); padding: 0 4px
       <section class="tab" id="tab-checks" hidden>
         <div class="page">
           <h1 class="large-title">Verlauf</h1>
-          <p class="subtitle">Deine letzten Prüfungen. Sie bleiben nur auf diesem Gerät.</p>
+          <p class="subtitle">Deine letzten Prüfungen und was Textlupe aus deinen Bewertungen gelernt hat. Alles bleibt auf diesem Gerät.</p>
+          <p class="section-head">Lernstand</p>
+          <div class="group" id="learn-box"></div>
+          <p class="section-foot">Textlupe lernt nur aus Texten, die du selbst bewertest. Je mehr es sind, desto stärker zählt das Gelernte, höchstens zur Hälfte.</p>
+          <p class="section-head">Prüfungen</p>
           <div class="group" id="checks"></div>
           <div class="group" style="margin-top:22px"><button class="row danger" id="btn-clear-checks" type="button">Verlauf löschen</button></div>
         </div>
@@ -500,6 +515,7 @@ ins.ph.gone { font: italic 13px var(--f-ui); color: var(--muted); padding: 0 4px
           <div class="info-card">
             <p class="info-text">Textlupe sucht nach Merkmalen, die in KI-Texten häufig vorkommen: gleichmäßige Satzlängen, typische Floskeln wie „darüber hinaus“, wenig Persönliches.</p>
             <p class="info-text">Jeder Satz bekommt eine Markierung, der ganze Text eine Einschätzung von 0 bis 100.</p>
+            <p class="info-text">Wenn du nach einer Prüfung angibst, ob ein Text von einem Menschen oder mit KI stammt, lernt Textlupe dazu: Wörter und Wortpaare, die in deinen KI-Texten häufiger vorkommen, zählen danach stärker.</p>
           </div>
           <p class="section-head">Grenzen</p>
           <div class="group">
@@ -510,11 +526,12 @@ ins.ph.gone { font: italic 13px var(--f-ui); color: var(--muted); padding: 0 4px
           <p class="section-head">Datenschutz</p>
           <div class="group">
             <div class="row"><span class="grow">Speicherort</span><span class="value">nur dieses iPhone</span></div>
+            <div class="row"><span class="grow">Gelerntes</span><span class="value">nur dieses iPhone</span></div>
             <div class="row"><span class="grow">Konto nötig</span><span class="value">nein</span></div>
           </div>
           <p class="section-head">App</p>
           <div class="group">
-            <div class="row"><span class="grow">Version</span><span class="value">Entwurf 0.4</span></div>
+            <div class="row"><span class="grow">Version</span><span class="value">Entwurf 0.5</span></div>
           </div>
         </div>
       </section>
@@ -774,12 +791,141 @@ $("backdrop").onclick = () => sheetClosable && closeSheet();
 document.addEventListener("keydown", e => { if (e.key === "Escape" && sheetClosable && !$("sheet").hidden) closeSheet(); });
 const el = (tag, cls, text) => { const n = document.createElement(tag); if (cls) n.className = cls; if (text != null) n.textContent = text; return n; };
 
+/* Lernen: Naive Bayes über Wörter und Wortpaare aus Texten, die du selbst bewertet hast. Ohne deine Angaben lernt nichts. */
+const LKEY = "textlupe-lernen";
+let training = [];
+try { training = JSON.parse(localStorage.getItem(LKEY)) || []; } catch (e) { training = []; }
+function saveTraining() { try { localStorage.setItem(LKEY, JSON.stringify(training)); } catch (e) {} }
+function tokens(t) {
+  const w = words(t).map(x => x.toLowerCase()), out = w.slice();
+  for (let i = 1; i < w.length; i++) out.push(w[i - 1] + " " + w[i]);
+  return out;
+}
+function buildCounts(items) {
+  const c = { ai: new Map(), human: new Map() }, tot = { ai: 0, human: 0 }, docs = { ai: 0, human: 0 };
+  items.forEach(it => { docs[it.label]++; tokens(it.text).forEach(t => { c[it.label].set(t, (c[it.label].get(t) || 0) + 1); tot[it.label]++; }); });
+  const vocab = new Set([...c.ai.keys(), ...c.human.keys()]).size + 1;
+  const llr = t => Math.log(((c.ai.get(t) || 0) + 1) / (tot.ai + vocab)) - Math.log(((c.human.get(t) || 0) + 1) / (tot.human + vocab));
+  return { c, docs, llr };
+}
+// Gleiche Vorab-Wahrscheinlichkeit für beide Seiten, damit ein Übergewicht einer Seite nicht durchschlägt.
+function probWith(counts, text) {
+  const ts = tokens(text);
+  if (!ts.length) return .5;
+  const sum = ts.reduce((a, t) => a + counts.llr(t), 0);
+  return 1 / (1 + Math.exp(-sum / Math.sqrt(ts.length)));
+}
+let modelCache = null;
+function model() {
+  if (modelCache) return modelCache;
+  const counts = buildCounts(training), n = training.length;
+  const ready = counts.docs.ai > 0 && counts.docs.human > 0;
+  return modelCache = { n, ready, counts, weight: ready ? Math.min(.5, n / 40) : 0, prob: t => probWith(counts, t) };
+}
+// Trefferquote: jeden bewerteten Text mit einem Modell ohne diesen Text vorhersagen.
+function accuracy() {
+  if (training.length < 6) return null;
+  let ok = 0, cnt = 0;
+  training.slice(-60).forEach(it => {
+    const cs = buildCounts(training.filter(x => x !== it));
+    if (!cs.docs.ai || !cs.docs.human) return;
+    cnt++; if ((probWith(cs, it.text) >= .5) === (it.label === "ai")) ok++;
+  });
+  return cnt ? ok / cnt : null;
+}
+function learnedWords(m) {
+  const { c, llr } = m.counts, res = [];
+  for (const t of new Set([...c.ai.keys(), ...c.human.keys()])) {
+    if (!t.includes(" ") && t.length < 4) continue;
+    if ((c.ai.get(t) || 0) + (c.human.get(t) || 0) < 2) continue;
+    res.push([t, llr(t)]);
+  }
+  res.sort((a, b) => b[1] - a[1]);
+  return { ai: res.filter(r => r[1] > .3).slice(0, 8).map(r => r[0]), human: res.filter(r => r[1] < -.3).slice(-8).reverse().map(r => r[0]) };
+}
+// Prüfung mit Gelerntem: Heuristik und Modell werden gemischt, das Modell zählt höchstens zur Hälfte.
+function check(text) {
+  const r = analyze(text), m = model();
+  r.learn = null;
+  if (!m.weight) return r;
+  const w = m.weight;
+  r.sents.forEach(s => {
+    const ns = clamp((1 - w) * s.score + w * m.prob(s.text), .03, .97);
+    if (Math.abs(ns - s.score) >= .04) {
+      s.reasons = s.reasons.filter(x => x[0] !== 0);
+      s.reasons.push(ns > s.score ? [1, "Gelernt: ähnelt Texten, die du als KI bewertet hast"] : [-1, "Gelernt: ähnelt Texten, die du als menschlich bewertet hast"]);
+    }
+    s.score = ns;
+  });
+  const pDoc = m.prob(text);
+  r.overall = clamp((1 - w) * r.overall + w * pDoc);
+  r.learn = { w, pDoc, n: m.n };
+  return r;
+}
+let currentEntry = null;
+const labelOf = e => e && (training.find(x => x.id === e.id) || {}).label;
+function setLabel(entry, lab) {
+  training = training.filter(x => x.id !== entry.id);
+  if (lab) training.push({ id: entry.id, text: entry.text.slice(0, 20000), label: lab, date: Date.now() });
+  training = training.slice(-200);
+  modelCache = null; saveTraining(); renderFeedback();
+  if (lab) toast("Gelernt. Ab der nächsten Prüfung zählt das mit.");
+}
+function renderFeedback() {
+  const box = $("feedback"); box.replaceChildren();
+  if (!currentEntry) return;
+  const lab = labelOf(currentEntry);
+  if (!lab) {
+    const fb = el("div", "fb"), act = el("div", "sugg-actions");
+    const hum = el("button", "small-btn", "Von Mensch"), ai = el("button", "small-btn", "Mit KI");
+    hum.type = ai.type = "button";
+    hum.onclick = () => setLabel(currentEntry, "human");
+    ai.onclick = () => setLabel(currentEntry, "ai");
+    act.append(hum, ai);
+    fb.append(el("p", null, "Weißt du sicher, woher dieser Text stammt?"), act);
+    box.append(fb);
+  } else {
+    const row = el("div", "row"), undo = el("button", "nav-btn", "Ändern"); undo.type = "button";
+    undo.style.padding = "0";
+    undo.onclick = () => setLabel(currentEntry, null);
+    row.append(el("span", "grow", `Bewertet als: ${lab === "ai" ? "mit KI geschrieben" : "von einem Menschen"}`), undo);
+    box.append(row);
+  }
+}
+let resetArmed = false;
+function renderLearn() {
+  const box = $("learn-box"); box.replaceChildren();
+  if (!training.length) {
+    box.append(el("p", "empty", "Noch nichts gelernt. Gib nach einer Prüfung an, ob der Text von einem Menschen oder mit KI stammt."));
+    return;
+  }
+  const m = model(), acc = accuracy();
+  const row = (a, b) => { const r = el("div", "row"); r.append(el("span", "grow", a), el("span", "value", b)); return r; };
+  box.append(
+    row("Bewertete Texte", `${m.counts.docs.human} Mensch · ${m.counts.docs.ai} KI`),
+    row("Einfluss auf die Bewertung", m.ready ? `${Math.round(m.weight * 100)} %` : `0 %, es fehlt ein ${m.counts.docs.ai ? "Menschen" : "KI"}-Text`),
+    row("Trefferquote", acc === null ? "ab 6 Texten" : `${Math.round(acc * 100)} %`)
+  );
+  if (m.ready) {
+    const lw = learnedWords(m), ch = el("div", "ch");
+    const chips = (list, cls) => { const c = el("div", "chips"); list.forEach(t => c.append(el("span", "chip-w" + cls, t))); if (!list.length) c.append(el("span", "sub", "noch zu wenig Daten")); return c; };
+    ch.append(el("span", "sub", "Typisch für deine KI-Texte"), chips(lw.ai, ""), el("span", "sub", "Typisch für deine menschlichen Texte"), chips(lw.human, " h"));
+    box.append(ch);
+  }
+  const reset = el("button", "row danger", "Gelerntes zurücksetzen"); reset.type = "button";
+  reset.onclick = () => {
+    if (!resetArmed) { resetArmed = true; reset.textContent = "Wirklich alles Gelernte löschen?"; setTimeout(() => { resetArmed = false; reset.textContent = "Gelerntes zurücksetzen"; }, 4000); return; }
+    resetArmed = false; training = []; modelCache = null; saveTraining(); renderLearn(); renderHistory(); toast("Gelerntes gelöscht");
+  };
+  box.append(reset);
+}
+
 /* Prüfen */
 const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
 let lastResult = null;
 $("btn-run").onclick = () => {
   const text = input.value;
-  const res = analyze(text);
+  const res = check(text);
   const steps = el("ul", "steps");
   ["Satzbau und Stil vermessen", "Typische KI-Formulierungen suchen", "Hinweise zusammenführen"].forEach(t => {
     const li = el("li"); li.append(el("span", "dot"), t); steps.append(li);
@@ -791,7 +937,8 @@ $("btn-run").onclick = () => {
   setTimeout(() => {
     closeSheet();
     renderResult(res);
-    addHistory(text, res, fileName);
+    currentEntry = addHistory(text, res, fileName);
+    renderFeedback();
     push("result");
   }, 300 + items.length * step + 300);
 };
@@ -848,6 +995,7 @@ function renderResult(r) {
     ["Persönliches", r.persAI, r.persCount ? `${r.persCount} Stellen mit „ich“, „wir“ oder Alltagssprache.` : "Kaum persönliche oder umgangssprachliche Stellen."],
     ["Wortvielfalt", r.ttrAI, `${Math.round(r.ttr * 100)} % der Wörter kommen nur einmal vor.`]
   ];
+  if (r.learn) sig.push(["Gelerntes", r.learn.pDoc, `Vergleich mit ${r.learn.n} von dir bewerteten Texten. Zählt zu ${Math.round(r.learn.w * 100)} % zur Bewertung.`]);
   const list = $("signals"); list.replaceChildren();
   sig.forEach(([name, v, txt]) => {
     const [cls, lean] = leanOf(v);
@@ -859,6 +1007,12 @@ function renderResult(r) {
     list.append(box);
     setTimeout(() => fill.style.width = Math.max(4, v * 100) + "%", 450);
   });
+  if (!r.learn) {
+    const box = el("div", "signal"), top = el("div", "signal-top");
+    top.append(el("strong", null, "Gelerntes"), el("span", "lean mid", "noch nicht aktiv"));
+    box.append(top, el("p", null, "Bewerte unten Texte, mindestens einen von einem Menschen und einen mit KI. Dann lernt Textlupe mit."));
+    list.append(box);
+  }
 }
 
 function showSentence(span, s) {
@@ -905,13 +1059,18 @@ if (!checks.length) {
     { text: ex3, date: Date.now() - 3 * 864e5, example: true }
   ].map(h => ({ ...h, idx: Math.round(analyze(h.text).overall * 100) }));
 }
+const newId = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+checks.forEach(h => h.id ??= newId());
 function saveHistory() { try { localStorage.setItem(HKEY, JSON.stringify(checks.filter(h => !h.example))); } catch (e) {} }
 function addHistory(text, r, file) {
-  checks.unshift({ text, file, date: Date.now(), idx: Math.round(r.overall * 100) });
+  const entry = { id: newId(), text, file, date: Date.now(), idx: Math.round(r.overall * 100) };
+  checks.unshift(entry);
   checks = checks.slice(0, 30);
   saveHistory();
+  return entry;
 }
 function renderHistory() {
+  renderLearn();
   const box = $("checks"); box.replaceChildren();
   if (!checks.length) { box.append(el("p", "empty", "Noch keine Prüfungen. Deine Ergebnisse erscheinen hier.")); return; }
   checks.forEach(h => {
@@ -919,7 +1078,7 @@ function renderHistory() {
     const g = el("span", "grow");
     const title = h.file || h.text.split(/\s+/).slice(0, 7).join(" ") + " …";
     const when = new Date(h.date).toLocaleDateString("de-DE", { day: "numeric", month: "short" });
-    g.append(el("span", "title", title), el("span", "sub", `${when} · ${words(h.text).length} Wörter${h.example ? " · Beispiel" : ""}`));
+    g.append(el("span", "title", title), el("span", "sub", `${when} · ${words(h.text).length} Wörter${h.example ? " · Beispiel" : ""}${labelOf(h) ? ` · als ${labelOf(h) === "ai" ? "KI" : "Mensch"} bewertet` : ""}`));
     const badge = el("span", "badge " + bandOf(h.idx / 100), String(h.idx));
     const chev = document.createElementNS("http://www.w3.org/2000/svg", "svg");
     chev.setAttribute("viewBox", "0 0 8 14"); chev.setAttribute("class", "chev");
@@ -927,7 +1086,8 @@ function renderHistory() {
     row.append(g, badge, chev);
     row.onclick = () => {
       input.value = h.text; setFileTag(h.file || ""); updateCount();
-      renderResult(analyze(h.text));
+      currentEntry = h;
+      renderResult(check(h.text)); renderFeedback();
       showTab("check"); popToRoot(); push("result");
     };
     box.append(row);
@@ -1062,8 +1222,8 @@ $("btn-copy-edit").onclick = () => navigator.clipboard.writeText(editedText()).t
 $("btn-recheck").onclick = () => {
   const text = editedText();
   input.value = text; setFileTag(""); updateCount();
-  const res = analyze(text);
-  renderResult(res); addHistory(text, res, "");
+  const res = check(text);
+  renderResult(res); currentEntry = addHistory(text, res, ""); renderFeedback();
   pop(); $("page-result").scrollTop = 0;
   toast("Überarbeiteter Text geprüft");
 };
