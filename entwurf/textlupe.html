@@ -95,6 +95,10 @@ textarea:focus { outline: none; }
 .upload input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
 .upload span { text-decoration: underline; text-underline-offset: 3px; }
 .notice { font-size: 13px; color: var(--ai); }
+.notice.busy { color: var(--muted); }
+.formats { font: 12px var(--f-mono); color: var(--muted); }
+.tag-file { font-size: 12px; font-weight: 600; color: var(--accent); border: 1px solid var(--line); padding: 2px 8px; border-radius: 6px;
+  max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 .promises { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; margin-top: 20px; }
 .promise { display: grid; gap: 2px; font-size: 14px; color: var(--muted); }
@@ -218,6 +222,7 @@ textarea:focus { outline: none; }
       <div class="sheet-bar">
         <div class="left">
           <span class="tag-example" id="example-tag">Beispieltext</span>
+          <span class="tag-file" id="file-tag" hidden></span>
         </div>
         <div class="right">
           <button class="link-btn" id="btn-example" type="button">Beispiel laden</button>
@@ -225,14 +230,15 @@ textarea:focus { outline: none; }
         </div>
       </div>
       <label for="input" class="eyebrow" hidden>Text</label>
-      <textarea id="input" spellcheck="false" placeholder="Text hier einfügen oder eine .txt-Datei hierher ziehen …"></textarea>
+      <textarea id="input" spellcheck="false" placeholder="Text hier einfügen oder eine Datei (.txt, .docx, .pdf) hierher ziehen …"></textarea>
       <div class="sheet-foot">
         <div class="left" style="display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center">
           <span class="count" id="count">0 Wörter</span>
           <label class="upload" for="file">
-            <input type="file" id="file" accept=".txt,.docx,.pdf,text/plain">
+            <input type="file" id="file" accept=".txt,.docx,.pdf,text/plain,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document">
             <span>Datei hochladen</span>
           </label>
+          <span class="formats">.txt, .docx, .pdf</span>
           <span class="notice" id="notice" hidden></span>
         </div>
         <button class="btn" id="btn-run" type="button">Text prüfen</button>
@@ -421,19 +427,102 @@ function updateCount() {
   $("btn-run").disabled = n < 20;
   $("example-tag").hidden = input.value !== SAMPLE;
 }
-input.addEventListener("input", updateCount);
-$("btn-example").onclick = () => { input.value = SAMPLE; updateCount(); input.focus(); };
-$("btn-clear").onclick = () => { input.value = ""; updateCount(); input.focus(); };
+input.addEventListener("input", () => { setFileTag(""); updateCount(); });
+$("btn-example").onclick = () => { input.value = SAMPLE; setFileTag(""); updateCount(); input.focus(); };
+$("btn-clear").onclick = () => { input.value = ""; setFileTag(""); updateCount(); input.focus(); };
 
-function showNotice(msg) { const n = $("notice"); n.textContent = msg; n.hidden = !msg; }
-function readFile(f) {
-  if (!f) return;
-  if (!/\.txt$/i.test(f.name) && f.type !== "text/plain") { showNotice("Im Entwurf gehen nur .txt-Dateien. Word und PDF folgen."); return; }
-  const r = new FileReader();
-  r.onload = () => { input.value = String(r.result); updateCount(); showNotice(""); };
-  r.readAsText(f);
+function showNotice(msg, busy = false) { const n = $("notice"); n.textContent = msg; n.hidden = !msg; n.classList.toggle("busy", busy); }
+function setFileTag(name) { const t = $("file-tag"); t.textContent = name ? `Aus Datei: ${name}` : ""; t.title = name; t.hidden = !name; }
+
+/* Dateien lesen: Bibliotheken werden erst geladen, wenn jemand Word oder PDF hochlädt. */
+const LIBS = {
+  mammoth: "https://cdn.jsdelivr.net/npm/mammoth@1.8.0/mammoth.browser.min.js",
+  pdf: "https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js",
+  // Der PDF-Worker läuft im Hauptthread, weil Worker von fremden Adressen blockiert sind.
+  pdfWorker: "https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js"
+};
+const loaded = {};
+function loadScript(src) {
+  return loaded[src] ??= new Promise((resolve, reject) => {
+    const s = document.createElement("script");
+    s.src = src; s.onload = resolve;
+    s.onerror = () => { delete loaded[src]; reject(new Error("load")); };
+    document.head.append(s);
+  });
 }
-$("file").addEventListener("change", e => readFile(e.target.files[0]));
+
+async function readDocx(f) {
+  await loadScript(LIBS.mammoth);
+  const { value } = await mammoth.extractRawText({ arrayBuffer: await f.arrayBuffer() });
+  return value;
+}
+
+async function readPdf(f) {
+  await loadScript(LIBS.pdfWorker);
+  await loadScript(LIBS.pdf);
+  const doc = await pdfjsLib.getDocument({ data: new Uint8Array(await f.arrayBuffer()) }).promise;
+  const pages = [];
+  for (let i = 1; i <= doc.numPages; i++) {
+    const { items } = await (await doc.getPage(i)).getTextContent();
+    // Zeilen mit ihrer Höhe auf der Seite sammeln.
+    const lines = []; let cur = null;
+    for (const it of items) {
+      if (!cur) cur = { y: it.transform[5], text: "" };
+      cur.text += it.str;
+      if (it.hasEOL) { lines.push(cur); cur = null; }
+    }
+    if (cur) lines.push(cur);
+    // Ein deutlich größerer Abstand als der übliche Zeilenabstand gilt als neuer Absatz.
+    const gaps = lines.slice(1).map((l, j) => Math.abs(lines[j].y - l.y)).filter(g => g > 0).sort((a, b) => a - b);
+    const lineGap = gaps[Math.floor(gaps.length / 2)] || 0;
+    let page = "";
+    lines.forEach((l, j) => {
+      const gap = j ? Math.abs(lines[j - 1].y - l.y) : 0;
+      page += (j ? (lineGap && gap > lineGap * 1.4 ? "\n\n" : "\n") : "") + l.text;
+    });
+    pages.push(page);
+  }
+  // Zeilenumbrüche des Layouts entfernen, Trennstriche zusammenziehen, Absätze und Seitenwechsel behalten.
+  return pages.join("\n\n")
+    .replace(/(\p{Ll})-\n(\p{Ll})/gu, "$1$2")
+    .split(/\n\s*\n/).map(p => p.replace(/\s*\n\s*/g, " ").trim()).filter(Boolean).join("\n\n");
+}
+
+async function readFile(f) {
+  if (!f) return;
+  const name = f.name.toLowerCase();
+  if (f.size > 10 * 1024 * 1024) { showNotice("Die Datei ist größer als 10 MB. Bitte eine kleinere Datei wählen."); return; }
+  if (name.endsWith(".doc")) { showNotice("Alte Word-Dateien (.doc) gehen nicht. Speichere sie in Word als .docx oder PDF."); return; }
+  const kind = name.endsWith(".docx") ? "docx" : name.endsWith(".pdf") || f.type === "application/pdf" ? "pdf"
+    : name.endsWith(".txt") || f.type === "text/plain" ? "txt" : null;
+  if (!kind) { showNotice("Dieses Format geht nicht. Erlaubt sind .txt, .docx und .pdf."); return; }
+
+  showNotice("Datei wird gelesen …", true);
+  $("btn-run").disabled = true;
+  try {
+    const text = kind === "txt" ? await f.text() : kind === "docx" ? await readDocx(f) : await readPdf(f);
+    const n = words(text).length;
+    if (n < 20) {
+      showNotice(kind === "pdf"
+        ? "In dieser PDF steckt kaum lesbarer Text. Gescannte Seiten kann Textlupe noch nicht lesen."
+        : "Die Datei enthält fast keinen Text.");
+      updateCount();
+      return;
+    }
+    input.value = text.trim();
+    setFileTag(f.name);
+    updateCount();
+    showNotice("");
+  } catch (e) {
+    showNotice(e.message === "load"
+      ? "Das Lesewerkzeug konnte nicht geladen werden. Prüfe deine Internetverbindung und versuche es noch einmal."
+      : e.name === "PasswordException"
+        ? "Die PDF ist mit einem Passwort geschützt. Bitte eine ungeschützte Version hochladen."
+        : "Die Datei ließ sich nicht lesen. Ist sie vielleicht beschädigt?");
+    updateCount();
+  }
+}
+$("file").addEventListener("change", e => { readFile(e.target.files[0]); e.target.value = ""; });
 const sheet = $("sheet");
 ["dragenter", "dragover"].forEach(ev => sheet.addEventListener(ev, e => { e.preventDefault(); sheet.classList.add("drag"); }));
 ["dragleave", "drop"].forEach(ev => sheet.addEventListener(ev, () => sheet.classList.remove("drag")));
