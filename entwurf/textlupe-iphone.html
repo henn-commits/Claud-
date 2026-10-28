@@ -279,6 +279,19 @@ ins.ph.gone { font: italic 13px var(--f-ui); color: var(--muted); padding: 0 4px
 .chip-w.h { background: var(--zone-human); color: var(--human); }
 .ch .sub { margin-bottom: 4px; }
 
+/* Unsichtbare Zeichen */
+.hc { display: inline-block; font: 600 10px/1.4 var(--f-mono); color: var(--accent-ink); background: var(--accent); border-radius: 4px; padding: 0 4px; margin: 0 1px; vertical-align: 2px; font-style: normal; }
+.hc.minor { background: var(--fill); color: var(--muted); }
+.hc.warn { background: var(--ai); color: var(--card); }
+.hg { outline: 1.5px solid var(--ai); outline-offset: 1px; border-radius: 3px; }
+.hx-ctx { font: 15px/1.6 var(--f-text); overflow-wrap: anywhere; }
+.ch .sub { font-size: 13px; color: var(--muted); }
+.hx-count { font: 600 12px var(--f-mono); color: var(--muted); }
+.pick { display: grid; gap: 8px; }
+.pick button { text-align: left; padding: 12px 14px; border-radius: 12px; background: var(--fill); display: grid; gap: 2px; }
+.pick button strong { font-weight: 600; }
+.pick button span { font-size: 13px; color: var(--muted); }
+
 /* Bottom Sheet */
 .backdrop { position: absolute; inset: 0; z-index: 50; background: rgba(0,0,0,.32); opacity: 0; transition: opacity .3s; }
 .backdrop.open { opacity: 1; }
@@ -423,6 +436,10 @@ ins.ph.gone { font: italic 13px var(--f-ui); color: var(--muted); padding: 0 4px
           </div>
           <p class="section-foot">Tippe auf einen Satz, um die Gründe zu sehen.</p>
 
+          <p class="section-head">Unsichtbare Zeichen</p>
+          <div class="group" id="hidden-box"></div>
+          <p class="section-foot">Solche Zeichen zeigen nicht, ob KI beteiligt war. Sie verraten aber oft, woher ein Text kopiert wurde, oder dass jemand etwas darin versteckt hat.</p>
+
           <p class="section-head">Worauf wir geachtet haben</p>
           <div class="group" id="signals"></div>
           <p class="section-foot">In der fertigen App kommen zwei Prüfungen dazu: ein Sprachmodell misst, wie vorhersehbar die Wörter sind, und ein KI-Gutachten begründet die Einschätzung in eigenen Worten.</p>
@@ -515,6 +532,7 @@ ins.ph.gone { font: italic 13px var(--f-ui); color: var(--muted); padding: 0 4px
           <div class="info-card">
             <p class="info-text">Textlupe sucht nach Merkmalen, die in KI-Texten häufig vorkommen: gleichmäßige Satzlängen, typische Floskeln wie „darüber hinaus“, wenig Persönliches.</p>
             <p class="info-text">Jeder Satz bekommt eine Markierung, der ganze Text eine Einschätzung von 0 bis 100.</p>
+            <p class="info-text">Außerdem zeigt Textlupe unsichtbare Zeichen wie geschützte Leerzeichen, Zeichen ohne Breite oder versteckte Tag-Zeichen. Sie fließen nicht in die Bewertung ein.</p>
             <p class="info-text">Wenn du nach einer Prüfung angibst, ob ein Text von einem Menschen oder mit KI stammt, lernt Textlupe dazu: Wörter und Wortpaare, die in deinen KI-Texten häufiger vorkommen, zählen danach stärker.</p>
           </div>
           <p class="section-head">Grenzen</p>
@@ -531,7 +549,7 @@ ins.ph.gone { font: italic 13px var(--f-ui); color: var(--muted); padding: 0 4px
           </div>
           <p class="section-head">App</p>
           <div class="group">
-            <div class="row"><span class="grow">Version</span><span class="value">Entwurf 0.5</span></div>
+            <div class="row"><span class="grow">Version</span><span class="value">Entwurf 0.6</span></div>
           </div>
         </div>
       </section>
@@ -705,13 +723,27 @@ function updateCount() {
   const n = words(input.value).length;
   $("count").textContent = `${n.toLocaleString("de-DE")} ${n === 1 ? "Wort" : "Wörter"}`;
   $("btn-run").disabled = n < 20;
-  $("example-tag").hidden = input.value !== SAMPLE;
+  $("example-tag").hidden = input.value !== SAMPLE && input.value !== SAMPLE_HIDDEN;
 }
 function showNotice(msg, busy = false) { const n = $("notice"); n.textContent = msg; n.hidden = !msg; n.classList.toggle("busy", busy); }
 let fileName = "";
 function setFileTag(name) { fileName = name; const t = $("file-tag"); t.textContent = name; t.title = name; t.hidden = !name; }
 input.addEventListener("input", () => { setFileTag(""); updateCount(); });
-$("btn-example").onclick = () => { input.value = SAMPLE; setFileTag(""); showNotice(""); updateCount(); };
+// Zweites Beispiel: kopierter Text mit geschützten Leerzeichen, Zeichen ohne Breite, weichem Trennstrich,
+// kyrillischem „а“ in „Freitag“ und versteckten Tag-Zeichen.
+const SAMPLE_HIDDEN = "Hallo zusammen, hier​ ist mein Beitrag zur Gruppen­arbeit. Ich habe die Zusammenfassung aus einer Webseite kopiert und ein bisschen angepasst.​ Die Ergebnisse findet ihr im Anhang (Seite 3), die Quellen stehen ganz unten. Bei Fragen meldet euch einfach, ich bin bis Frаitag erreichbar und schaue abends noch mal rein." +
+  String.fromCodePoint(...[..."KI-generiert"].map(c => 0xE0000 + c.charCodeAt(0)));
+$("btn-example").onclick = () => {
+  const pick = el("div", "pick");
+  [[SAMPLE, "Wanderbericht", "Persönlicher Absatz und KI-typischer Absatz gemischt"],
+   [SAMPLE_HIDDEN, "Kopierter Text", "Enthält unsichtbare Zeichen und einen versteckten Hinweis"]].forEach(([text, title, sub]) => {
+    const b = el("button"); b.type = "button";
+    b.append(el("strong", null, title), el("span", null, sub));
+    b.onclick = () => { input.value = text; setFileTag(""); showNotice(""); updateCount(); closeSheet(); };
+    pick.append(b);
+  });
+  openSheet([el("h3", null, "Beispiel laden"), pick]);
+};
 $("btn-clear").onclick = () => { input.value = ""; setFileTag(""); showNotice(""); updateCount(); input.focus(); };
 
 async function readFile(f) {
@@ -920,6 +952,98 @@ function renderLearn() {
   box.append(reset);
 }
 
+/* Unsichtbare Zeichen finden und sichtbar machen. Nichts wird entfernt. */
+const HIDDEN = {
+  nbsp: { label: "NBSP", name: "Geschützte Leerzeichen", info: "Sehen aus wie normale Leerzeichen. Entstehen oft beim Kopieren aus Word, Webseiten oder PDFs." },
+  zw: { label: "ZW", name: "Zeichen ohne Breite", info: "Komplett unsichtbar. Kommen aus Webseiten oder Messengern, werden aber auch gezielt eingefügt, um Texte zu markieren." },
+  shy: { label: "SHY", name: "Weiche Trennstriche", info: "Zeigen nur am Zeilenende einen Trennstrich. Stammen meist aus Textverarbeitungen." },
+  bom: { label: "BOM", name: "Dateikennung", info: "Steht normalerweise am Anfang einer Textdatei. Mitten im Text ist sie ein Kopier-Überbleibsel." },
+  space: { label: "SP", name: "Besondere Leerzeichen", info: "Schmale oder breite Leerzeichen aus Satzprogrammen und PDFs." },
+  bidi: { label: "BIDI", name: "Schreibrichtungs-Zeichen", info: "Steuern, ob Text von links oder rechts läuft. In deutschem Text ungewöhnlich, sie können die Anzeige verfälschen.", warn: true },
+  tag: { label: "TAG", name: "Versteckte Tag-Zeichen", info: "Kommen in normalem Text praktisch nie vor. Sie tragen unsichtbare Botschaften, die Menschen nicht sehen, Programme aber lesen.", warn: true },
+  cyr: { label: "KYR", name: "Kyrillische Doppelgänger", info: "Buchstaben, die wie lateinische aussehen, aber kyrillisch sind. Das kann Suchfunktionen und Prüfprogramme täuschen.", warn: true }
+};
+const LATIN = /[A-Za-zÄÖÜäöüß]/, PICTO = /\p{Extended_Pictographic}/u;
+function classify(c, prev, next) {
+  const cp = c.codePointAt(0);
+  if (cp === 0xA0 || cp === 0x202F) return "nbsp";
+  if (cp === 0x200D) return PICTO.test(prev) && PICTO.test(next) ? null : "zw";
+  if (cp === 0x200B || cp === 0x200C || cp === 0x2060) return "zw";
+  if (cp === 0xAD) return "shy";
+  if (cp === 0xFEFF) return "bom";
+  if ((cp >= 0x2000 && cp <= 0x200A) || cp === 0x205F || cp === 0x3000) return "space";
+  if (cp === 0x200E || cp === 0x200F || (cp >= 0x202A && cp <= 0x202E) || (cp >= 0x2066 && cp <= 0x2069)) return "bidi";
+  if (cp >= 0xE0000 && cp <= 0xE007F) return "tag";
+  if (/[Ѐ-ӿ]/.test(c) && (LATIN.test(prev) || LATIN.test(next))) return "cyr";
+  return null;
+}
+function scanHidden(text) {
+  const chars = [...text], found = [];
+  let pos = 0;
+  chars.forEach((c, k) => {
+    const type = classify(c, chars[k - 1] || "", chars[k + 1] || "");
+    if (type) found.push({ type, pos, c });
+    pos += c.length;
+  });
+  return found;
+}
+// Tag-Zeichen U+E0020 bis U+E007E entsprechen ASCII und lassen sich lesbar machen.
+function decodeTags(text) {
+  return [...text].map(c => c.codePointAt(0)).filter(cp => cp >= 0xE0020 && cp <= 0xE007E).map(cp => String.fromCharCode(cp - 0xE0000)).join("");
+}
+// focusType hebt die Fundstelle selbst hervor, alle anderen unsichtbaren Zeichen erscheinen dezent.
+function appendVisible(parent, str, focusType) {
+  const chars = [...str];
+  chars.forEach((c, k) => {
+    const type = focusType || classify(c, chars[k - 1] || "", chars[k + 1] || "");
+    if (!type) { parent.append(c === "\n" ? " " : c); return; }
+    if (type === "cyr") {
+      const g = el("span", "hg", c); g.title = "kyrillisch"; parent.append(g);
+      if (focusType) parent.append(el("span", "hc warn", "KYR"));
+      return;
+    }
+    const chip = el("span", "hc" + (focusType ? (HIDDEN[type].warn ? " warn" : "") : " minor"), HIDDEN[type].label);
+    chip.title = HIDDEN[type].name;
+    parent.append(chip);
+  });
+}
+function renderHidden(text) {
+  const box = $("hidden-box"); box.replaceChildren();
+  const found = scanHidden(text);
+  if (!found.length) {
+    const r = el("div", "row"); r.append(el("span", "grow", "Keine unsichtbaren Zeichen gefunden")); box.append(r); return;
+  }
+  const groups = {};
+  found.forEach(f => (groups[f.type] ??= []).push(f));
+  const types = Object.keys(groups);
+  const head = el("div", "stat-card"), top = el("div", "stat-top");
+  top.append(el("b", null, String(found.length)), el("span", null, `${found.length === 1 ? "unsichtbares Zeichen" : "unsichtbare Zeichen"} in ${types.length} ${types.length === 1 ? "Art" : "Arten"}`));
+  head.append(top);
+  const msg = decodeTags(text);
+  if (msg) head.append(el("p", "warn", `Versteckte Botschaft im Text: „${msg}“`));
+  box.append(head);
+  types.sort((a, b) => !!HIDDEN[b].warn - !!HIDDEN[a].warn).forEach(type => {
+    const h = HIDDEN[type], list = groups[type], ch = el("div", "ch"), t = el("div", "ch-top");
+    const name = el("b"); name.append(el("span", "hc" + (h.warn ? " warn" : ""), h.label), " " + h.name);
+    t.append(name, el("span", "hx-count", `${list.length}×`));
+    ch.append(t, el("span", "sub", h.info));
+    // Tag-Zeichen stehen meist als ein Block, dafür reicht eine Fundstelle.
+    (type === "tag" ? list.slice(0, 1) : list.slice(0, 3)).forEach(f => {
+      const ctx = el("p", "hx-ctx");
+      let before = text.slice(Math.max(0, f.pos - 28), f.pos), after = text.slice(f.pos + f.c.length, f.pos + f.c.length + 28);
+      if (f.pos > 28) before = "… " + before.replace(/^\S*\s/, "");
+      if (type === "tag") after = after.replace(/[\u{E0000}-\u{E007F}]/gu, "");
+      appendVisible(ctx, before);
+      appendVisible(ctx, f.c, type);
+      appendVisible(ctx, after);
+      if (f.pos + f.c.length + 28 < text.length) ctx.append(" …");
+      ch.append(ctx);
+    });
+    if (type !== "tag" && list.length > 3) ch.append(el("span", "sub", `und ${list.length - 3} weitere`));
+    box.append(ch);
+  });
+}
+
 /* Prüfen */
 const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
 let lastResult = null;
@@ -973,6 +1097,7 @@ function renderResult(r) {
   ["ai", "mid", "human"].forEach(k => $("stat-" + k).textContent = `${pct[k]} % · ${satz(part[k].n)}`);
   $("stack-ai").style.width = $("stack-mid").style.width = "0";
   setTimeout(() => { $("stack-ai").style.width = pct.ai + "%"; $("stack-mid").style.width = pct.mid + "%"; }, 450);
+  renderHidden(input.value);
 
   const marked = $("marked"); marked.replaceChildren();
   r.paras.forEach(p => {
