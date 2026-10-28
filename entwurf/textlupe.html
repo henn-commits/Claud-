@@ -1,0 +1,555 @@
+<title>Textlupe</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Instrument+Sans:wght@400;500;600&family=Source+Serif+4:opsz,wght@8..60,400;8..60,500&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: ruhige Arbeitsfläche. Eingabe als ein Blatt, Ergebnis als Text mit Textmarker links und Befund rechts (mobil gestapelt, Befund zuerst). */
+:root {
+  --bg: #F1F3F7;
+  --surface: #FFFFFF;
+  --ink: #18202E;
+  --muted: #5A6477;
+  --line: #DCE1EA;
+  --accent: #2C47B0;
+  --accent-ink: #FFFFFF;
+  --hl-ai: rgba(255, 190, 0, .48);
+  --hl-mid: rgba(255, 190, 0, .2);
+  --ai: #9A5B00;
+  --mid: #5F6676;
+  --human: #24704F;
+  --zone-human: #D3EADD;
+  --zone-mid: #E4E7EE;
+  --zone-ai: #FBE2A4;
+  --f-display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --f-ui: "Instrument Sans", "Segoe UI", system-ui, sans-serif;
+  --f-text: "Source Serif 4", Georgia, "Times New Roman", serif;
+  --f-mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0E1219; --surface: #161B25; --ink: #E6E9F0; --muted: #9BA4B6; --line: #283041;
+    --accent: #93A8FF; --accent-ink: #0E1219;
+    --hl-ai: rgba(255, 190, 0, .34); --hl-mid: rgba(255, 190, 0, .14);
+    --ai: #F2B54C; --mid: #9BA4B6; --human: #72CDA2;
+    --zone-human: #1C3A2C; --zone-mid: #252B37; --zone-ai: #4A3912;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0E1219; --surface: #161B25; --ink: #E6E9F0; --muted: #9BA4B6; --line: #283041;
+  --accent: #93A8FF; --accent-ink: #0E1219;
+  --hl-ai: rgba(255, 190, 0, .34); --hl-mid: rgba(255, 190, 0, .14);
+  --ai: #F2B54C; --mid: #9BA4B6; --human: #72CDA2;
+  --zone-human: #1C3A2C; --zone-mid: #252B37; --zone-ai: #4A3912;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--ink);
+  font: 15px/1.55 var(--f-ui);
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 0 48px;
+}
+.wrap { max-width: 1120px; margin: 0 auto; }
+h1, h2, h3 { font-family: var(--f-display); text-wrap: balance; margin: 0; letter-spacing: -.01em; }
+p { margin: 0; }
+button { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
+
+/* Kopf */
+.top { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-block: 20px; }
+.brand { display: flex; align-items: center; gap: 10px; font-family: var(--f-display); font-weight: 700; font-size: 20px; }
+.brand svg { width: 28px; height: 28px; }
+.chip { font: 500 11px/1 var(--f-mono); letter-spacing: .08em; text-transform: uppercase; color: var(--muted);
+  border: 1px solid var(--line); border-radius: 999px; padding: 6px 10px; white-space: nowrap; }
+
+/* Eingabe */
+.intro { display: grid; gap: 8px; margin-block: 24px 20px; max-width: 640px; }
+.intro h1 { font-size: clamp(28px, 5vw, 44px); line-height: 1.08; font-weight: 700; }
+.intro p { color: var(--muted); font-size: 17px; }
+
+.sheet { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; }
+.sheet-bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 16px;
+  padding: 10px 14px; border-bottom: 1px solid var(--line); }
+.sheet-bar .left, .sheet-bar .right { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.tag-example { font-size: 12px; font-weight: 600; color: var(--ai); background: var(--hl-mid); padding: 3px 8px; border-radius: 6px; }
+.link-btn { background: none; border: 0; padding: 4px 6px; color: var(--accent); font-weight: 500; cursor: pointer; border-radius: 6px; }
+.link-btn:hover { text-decoration: underline; }
+textarea {
+  display: block; width: 100%; min-height: 300px; resize: vertical; border: 0; background: transparent; color: var(--ink);
+  font: 17px/1.65 var(--f-text); padding: 18px 20px;
+}
+textarea:focus { outline: none; }
+.sheet.drag { outline: 2px dashed var(--accent); outline-offset: -6px; }
+.sheet-foot { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 12px 14px; border-top: 1px solid var(--line); }
+.count { font: 13px var(--f-mono); color: var(--muted); font-variant-numeric: tabular-nums; }
+.btn { display: inline-flex; align-items: center; gap: 8px; border: 0; border-radius: 10px; padding: 12px 20px;
+  background: var(--accent); color: var(--accent-ink); font-weight: 600; font-size: 15px; cursor: pointer; }
+.btn:disabled { opacity: .45; cursor: not-allowed; }
+.btn.ghost { background: transparent; color: var(--ink); border: 1px solid var(--line); }
+.upload { position: relative; display: inline-flex; align-items: center; gap: 6px; font-size: 14px; color: var(--muted); cursor: pointer; }
+.upload input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+.upload span { text-decoration: underline; text-underline-offset: 3px; }
+.notice { font-size: 13px; color: var(--ai); }
+
+.promises { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; margin-top: 20px; }
+.promise { display: grid; gap: 2px; font-size: 14px; color: var(--muted); }
+.promise strong { color: var(--ink); font-weight: 600; }
+
+/* Analyse läuft */
+.busy { display: grid; place-items: center; min-height: 60vh; }
+.busy-card { width: min(420px, 100%); display: grid; gap: 18px; }
+.busy-card h2 { font-size: 24px; }
+.steps { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
+.steps li { display: flex; align-items: center; gap: 12px; color: var(--muted); transition: color .2s; }
+.steps li .dot { width: 22px; height: 22px; border-radius: 50%; border: 2px solid var(--line); display: grid; place-items: center; flex: none; }
+.steps li.active { color: var(--ink); }
+.steps li.active .dot { border-color: var(--accent); border-top-color: transparent; animation: spin .8s linear infinite; }
+.steps li.done { color: var(--ink); }
+.steps li.done .dot { border-color: var(--human); background: var(--human); }
+.steps li.done .dot::after { content: ""; width: 9px; height: 5px; border: 2px solid var(--surface); border-top: 0; border-right: 0; transform: rotate(-45deg) translate(1px, -1px); }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Ergebnis */
+.res-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; margin-block: 16px 20px; }
+.res-head h1 { font-size: clamp(24px, 4vw, 32px); }
+.res-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.res-grid { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); gap: 20px; align-items: start; }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 20px; display: grid; gap: 16px; min-width: 0; }
+.panel h2 { font-size: 18px; }
+.eyebrow { font: 500 11px/1 var(--f-mono); letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+
+.verdict { display: grid; gap: 6px; }
+.verdict h2 { font-size: 26px; line-height: 1.15; }
+.verdict p { color: var(--muted); }
+.scale { display: grid; gap: 6px; }
+.scale-track { position: relative; height: 14px; border-radius: 7px; display: grid; grid-template-columns: 35fr 30fr 35fr; overflow: visible; }
+.scale-track span:nth-child(1) { background: var(--zone-human); border-radius: 7px 0 0 7px; }
+.scale-track span:nth-child(2) { background: var(--zone-mid); }
+.scale-track span:nth-child(3) { background: var(--zone-ai); border-radius: 0 7px 7px 0; }
+.marker { position: absolute; top: -6px; width: 4px; height: 26px; border-radius: 2px; background: var(--ink); transform: translateX(-50%);
+  transition: left .8s cubic-bezier(.2,.8,.2,1); box-shadow: 0 0 0 3px var(--surface); }
+.scale-labels { display: grid; grid-template-columns: 35fr 30fr 35fr; font-size: 12px; color: var(--muted); }
+.scale-labels span:nth-child(2) { text-align: center; }
+.scale-labels span:nth-child(3) { text-align: right; }
+.facts { display: grid; grid-template-columns: auto 1fr; gap: 6px 16px; font-size: 14px; }
+.facts dt { color: var(--muted); }
+.facts dd { margin: 0; font-weight: 500; font-variant-numeric: tabular-nums; }
+
+.legend { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 13px; color: var(--muted); }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.sw { width: 18px; height: 12px; border-radius: 3px; border: 1px solid var(--line); }
+.sw.ai { background: var(--hl-ai); } .sw.mid { background: var(--hl-mid); } .sw.human { background: transparent; }
+
+.marked { font: 17px/1.75 var(--f-text); display: grid; gap: 14px; }
+.marked p { overflow-wrap: anywhere; }
+.s { cursor: pointer; border-radius: 3px; padding: 1px 0; -webkit-box-decoration-break: clone; box-decoration-break: clone; transition: box-shadow .15s; }
+.s.ai { background: linear-gradient(transparent 10%, var(--hl-ai) 10%, var(--hl-ai) 92%, transparent 92%); }
+.s.mid { background: linear-gradient(transparent 10%, var(--hl-mid) 10%, var(--hl-mid) 92%, transparent 92%); }
+.s:hover { box-shadow: inset 0 -2px 0 var(--muted); }
+.s.sel { box-shadow: inset 0 -2px 0 var(--accent); }
+
+.detail { border-top: 1px solid var(--line); padding-top: 16px; display: grid; gap: 10px; }
+.detail .quote { font: italic 15px/1.5 var(--f-text); color: var(--muted); }
+.pill { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; padding: 3px 9px; border-radius: 999px; width: fit-content; }
+.pill.ai { color: var(--ai); background: var(--hl-mid); }
+.pill.mid { color: var(--mid); background: var(--zone-mid); }
+.pill.human { color: var(--human); background: var(--zone-human); }
+.reasons { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; font-size: 14px; }
+.reasons li { display: grid; grid-template-columns: 20px 1fr; gap: 6px; }
+.reasons .sign { font: 600 14px var(--f-mono); text-align: center; }
+.reasons .plus { color: var(--ai); } .reasons .minus { color: var(--human); } .reasons .zero { color: var(--muted); }
+
+.signals { list-style: none; margin: 0; padding: 0; display: grid; gap: 16px; }
+.signal { display: grid; gap: 6px; }
+.signal-top { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.signal-top strong { font-weight: 600; }
+.signal p { font-size: 13px; color: var(--muted); }
+.bar { height: 6px; border-radius: 3px; background: var(--zone-mid); overflow: hidden; }
+.bar i { display: block; height: 100%; border-radius: 3px; transition: width .8s cubic-bezier(.2,.8,.2,1); }
+.lean { font-size: 12px; font-weight: 600; white-space: nowrap; }
+.lean.ai { color: var(--ai); } .lean.human { color: var(--human); } .lean.mid { color: var(--mid); }
+.later { display: grid; gap: 8px; padding: 14px; border: 1px dashed var(--line); border-radius: 10px; font-size: 13px; color: var(--muted); }
+.later strong { color: var(--ink); font-weight: 600; }
+
+.limits { margin-top: 20px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; }
+.limits h3 { font-size: 15px; margin-bottom: 4px; }
+.limits p { font-size: 14px; color: var(--muted); }
+
+.toast { position: fixed; left: 50%; bottom: calc(24px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%);
+  background: var(--ink); color: var(--bg); padding: 10px 16px; border-radius: 10px; font-size: 14px; }
+
+@media (max-width: 820px) {
+  .res-grid { grid-template-columns: minmax(0, 1fr); }
+  .res-side { order: -1; }
+  .promises, .limits { grid-template-columns: minmax(0, 1fr); gap: 12px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { transition: none !important; animation-duration: .01ms !important; }
+}
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <div class="brand">
+      <svg viewBox="0 0 32 32" aria-hidden="true">
+        <circle cx="13" cy="13" r="9" fill="none" stroke="var(--accent)" stroke-width="3"/>
+        <rect x="8" y="10" width="10" height="3" rx="1.5" fill="var(--hl-ai)"/>
+        <rect x="8" y="15" width="7" height="2" rx="1" fill="var(--muted)"/>
+        <path d="M20 20l7 7" stroke="var(--accent)" stroke-width="3.5" stroke-linecap="round"/>
+      </svg>
+      Textlupe
+    </div>
+    <span class="chip">Entwurf · Prototyp</span>
+  </header>
+
+  <!-- Ansicht 1: Eingabe -->
+  <main id="view-input">
+    <section class="intro">
+      <h1>Hat hier eine KI mitgeschrieben?</h1>
+      <p>Füge einen Text ein. Textlupe markiert Stellen, die typisch für KI wirken, und erklärt dir, warum.</p>
+    </section>
+
+    <div class="sheet" id="sheet">
+      <div class="sheet-bar">
+        <div class="left">
+          <span class="tag-example" id="example-tag">Beispieltext</span>
+        </div>
+        <div class="right">
+          <button class="link-btn" id="btn-example" type="button">Beispiel laden</button>
+          <button class="link-btn" id="btn-clear" type="button">Leeren</button>
+        </div>
+      </div>
+      <label for="input" class="eyebrow" hidden>Text</label>
+      <textarea id="input" spellcheck="false" placeholder="Text hier einfügen oder eine .txt-Datei hierher ziehen …"></textarea>
+      <div class="sheet-foot">
+        <div class="left" style="display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center">
+          <span class="count" id="count">0 Wörter</span>
+          <label class="upload" for="file">
+            <input type="file" id="file" accept=".txt,.docx,.pdf,text/plain">
+            <span>Datei hochladen</span>
+          </label>
+          <span class="notice" id="notice" hidden></span>
+        </div>
+        <button class="btn" id="btn-run" type="button">Text prüfen</button>
+      </div>
+    </div>
+
+    <div class="promises">
+      <div class="promise"><strong>Nichts wird gespeichert</strong>Dein Text wird nur für die Prüfung verwendet und danach verworfen.</div>
+      <div class="promise"><strong>Ab etwa 150 Wörtern</strong>Je länger der Text, desto aussagekräftiger die Einschätzung.</div>
+      <div class="promise"><strong>Einschätzung, kein Urteil</strong>Kein Programm kann KI-Texte sicher erkennen. Textlupe zeigt Hinweise.</div>
+    </div>
+  </main>
+
+  <!-- Ansicht 2: Analyse läuft -->
+  <main id="view-busy" hidden>
+    <div class="busy">
+      <div class="busy-card">
+        <h2>Text wird geprüft</h2>
+        <ul class="steps" id="steps">
+          <li><span class="dot"></span>Satzbau und Stil vermessen</li>
+          <li><span class="dot"></span>Typische KI-Formulierungen suchen</li>
+          <li><span class="dot"></span>Hinweise zusammenführen</li>
+        </ul>
+      </div>
+    </div>
+  </main>
+
+  <!-- Ansicht 3: Ergebnis -->
+  <main id="view-result" hidden>
+    <div class="res-head">
+      <h1>Ergebnis</h1>
+      <div class="res-actions">
+        <button class="btn ghost" id="btn-copy" type="button">Ergebnis kopieren</button>
+        <button class="btn" id="btn-new" type="button">Neuen Text prüfen</button>
+      </div>
+    </div>
+
+    <div class="res-grid">
+      <section class="panel">
+        <div style="display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px;align-items:baseline">
+          <h2>Dein Text mit Markierungen</h2>
+          <div class="legend">
+            <span><i class="sw ai"></i>KI-typisch</span>
+            <span><i class="sw mid"></i>teilweise</span>
+            <span><i class="sw human"></i>unauffällig</span>
+          </div>
+        </div>
+        <div class="marked" id="marked"></div>
+        <div class="detail" id="detail">
+          <p class="eyebrow">Satz im Detail</p>
+          <p style="color:var(--muted);font-size:14px">Tippe auf einen Satz, um zu sehen, warum er so markiert ist.</p>
+        </div>
+      </section>
+
+      <aside class="res-side" style="display:grid;gap:20px;min-width:0">
+        <section class="panel">
+          <div class="verdict">
+            <p class="eyebrow">Gesamteinschätzung</p>
+            <h2 id="verdict-title"></h2>
+            <p id="verdict-text"></p>
+          </div>
+          <div class="scale" aria-label="Skala von menschlich bis KI-typisch">
+            <div class="scale-track"><span></span><span></span><span></span><i class="marker" id="marker" style="left:0%"></i></div>
+            <div class="scale-labels"><span>eher menschlich</span><span>gemischt</span><span>eher KI</span></div>
+          </div>
+          <dl class="facts">
+            <dt>KI-Merkmale</dt><dd id="fact-index"></dd>
+            <dt>Aussagekraft</dt><dd id="fact-conf"></dd>
+            <dt>Umfang</dt><dd id="fact-size"></dd>
+          </dl>
+        </section>
+
+        <section class="panel">
+          <h2>Worauf wir geachtet haben</h2>
+          <ul class="signals" id="signals"></ul>
+          <div class="later">
+            <strong>In der fertigen App zusätzlich</strong>
+            <span>Vorhersehbarkeit: Ein Sprachmodell misst, wie erwartbar jedes Wort ist. KI-Texte sind meist sehr erwartbar.</span>
+            <span>KI-Gutachten: Ein KI-Modell liest den Text und begründet seine Einschätzung in eigenen Worten.</span>
+          </div>
+        </section>
+      </aside>
+    </div>
+
+    <section class="panel limits-panel" style="margin-top:20px">
+      <h2>So solltest du das Ergebnis lesen</h2>
+      <div class="limits" style="margin-top:0">
+        <div><h3>Hinweis, kein Beweis</h3><p>Auch die besten Detektoren irren sich regelmäßig. Nutze das Ergebnis nicht, um jemandem Betrug vorzuwerfen.</p></div>
+        <div><h3>Sachliche Texte wirken oft wie KI</h3><p>Bewerbungen, Behördenbriefe oder Texte von Nicht-Muttersprachlern werden häufiger fälschlich markiert.</p></div>
+        <div><h3>Überarbeitete KI-Texte fallen kaum auf</h3><p>Wer einen KI-Text umschreibt, verwischt die Spuren. Ein unauffälliges Ergebnis heißt nicht „ohne KI“.</p></div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<div class="toast" id="toast" hidden></div>
+
+<script>
+const SAMPLE = `Letzten Samstag waren wir endlich mal wieder am Edersee. Ehrlich gesagt hatte ich keine große Lust, weil es morgens noch genieselt hat und mein Knie seit der Wanderung im Mai rumzickt. Aber Jonas hat nicht lockergelassen. Wir sind dann bis zur Sperrmauer gelaufen, haben uns an der Bude eine Bratwurst geholt und uns über die Wespen geärgert. Auf dem Rückweg hat's dann doch noch geschüttet.
+
+Wandern bietet zahlreiche Vorteile für Körper und Geist. Es ist wichtig zu beachten, dass regelmäßige Bewegung in der Natur nachweislich Stress reduziert und das allgemeine Wohlbefinden steigert. Darüber hinaus fördert Wandern die Ausdauer und stärkt das Herz-Kreislauf-System. Zusammenfassend lässt sich sagen, dass Wandern eine ganzheitliche Aktivität ist, die sowohl die körperliche als auch die mentale Gesundheit nachhaltig unterstützt.`;
+
+// Vereinfachte Heuristik für den Entwurf. Die echte App ergänzt Sprachmodell-Messung und KI-Gutachten.
+const PHRASES = [
+  "es ist wichtig zu beachten", "es ist wichtig", "darüber hinaus", "zusammenfassend", "lässt sich sagen",
+  "abschließend", "spielt eine entscheidende rolle", "spielt eine wichtige rolle", "eine zentrale rolle",
+  "von großer bedeutung", "in der heutigen zeit", "in der heutigen", "nicht nur", "sowohl", "ganzheitlich",
+  "nachhaltig", "bietet zahlreiche", "zahlreiche", "vielfältig", "nachweislich", "fördert", "steigert",
+  "maßgeblich", "letztendlich", "im folgenden", "tauchen sie ein", "entdecken sie", "ein wichtiger aspekt",
+  "wesentlich", "effektiv", "optimal", "zudem", "eine vielzahl"
+].sort((a, b) => b.length - a.length);
+const PERSONAL = /\b(ich|wir|mein\w*|mir|mich|uns|du|dein\w*)\b/gi;
+const COLLOQ = /\b(ehrlich gesagt|halt|mal|echt|irgendwie|naja|eigentlich|bisschen|rum\w+|krass|doch noch)\b|['’]s\b/gi;
+const WORD = /[A-Za-zÄÖÜäöüß0-9'’-]+/g;
+
+const $ = id => document.getElementById(id);
+const words = t => t.match(WORD) || [];
+const clamp = (v, a = 0, b = 1) => Math.min(b, Math.max(a, v));
+
+function findPhrases(s) {
+  let work = s.toLowerCase(); const hits = [];
+  for (const p of PHRASES) {
+    let i;
+    while ((i = work.indexOf(p)) >= 0) { hits.push(p); work = work.slice(0, i) + " ".repeat(p.length) + work.slice(i + p.length); }
+  }
+  return hits;
+}
+
+function scoreSentence(text) {
+  const w = words(text), wc = w.length, reasons = [];
+  let s = .35;
+  const hits = findPhrases(text);
+  if (hits.length) {
+    s += Math.min(.5, hits.length * .22);
+    hits.forEach(h => reasons.push([1, `Typische KI-Formulierung: „${h}“`]));
+  }
+  const pers = [...new Set((text.match(PERSONAL) || []).map(x => x.toLowerCase()))];
+  if (pers.length) { s -= Math.min(.3, pers.length * .12); reasons.push([-1, `Persönliche Perspektive („${pers.join("“, „")}“)`]); }
+  const coll = [...new Set((text.match(COLLOQ) || []).map(x => x.toLowerCase()))];
+  if (coll.length) { s -= Math.min(.25, coll.length * .1); reasons.push([-1, `Umgangssprache („${coll.join("“, „")}“)`]); }
+  if (/\d/.test(text)) { s -= .05; reasons.push([-1, "Konkrete Zahl oder Angabe"]); }
+  if (wc >= 16 && wc <= 32) { s += .1; reasons.push([1, `Mittellanger, glatt gebauter Satz (${wc} Wörter)`]); }
+  else if (wc < 9) { s -= .1; reasons.push([-1, `Kurzer Satz (${wc} Wörter)`]); }
+  const long = w.filter(x => x.length > 12).length;
+  if (wc && long / wc > .15) { s += .08; reasons.push([1, "Viele lange, abstrakte Wörter"]); }
+  if (!reasons.length) reasons.push([0, "Keine auffälligen Merkmale"]);
+  return { text, wc, score: clamp(s, .03, .97), reasons, hits };
+}
+
+const level = v => v >= .6 ? "ai" : v >= .4 ? "mid" : "human";
+const LEVEL_TEXT = { ai: "wirkt KI-typisch", mid: "teilweise auffällig", human: "unauffällig" };
+
+function analyze(text) {
+  const paras = text.trim().split(/\n\s*\n/).map(p => p.trim()).filter(Boolean)
+    .map(p => (p.replace(/\s+/g, " ").match(/[^.!?…]+(?:[.!?…]+["“”»«')]*|$)/g) || [p]).map(s => s.trim()).filter(Boolean).map(scoreSentence));
+  const sents = paras.flat();
+  const total = sents.reduce((a, s) => a + s.wc, 0) || 1;
+  const meanScore = sents.reduce((a, s) => a + s.score * s.wc, 0) / total;
+
+  const lens = sents.map(s => s.wc);
+  const mean = lens.reduce((a, b) => a + b, 0) / (lens.length || 1);
+  const sd = Math.sqrt(lens.reduce((a, b) => a + (b - mean) ** 2, 0) / (lens.length || 1));
+  const cv = mean ? sd / mean : 0;
+  const burstAI = clamp((.6 - cv) / .4);
+
+  const allHits = sents.flatMap(s => s.hits);
+  const phraseDensity = allHits.length / total * 100;
+  const phraseAI = clamp(phraseDensity / 4);
+
+  const w = words(text).map(x => x.toLowerCase());
+  const ttr = w.length ? new Set(w).size / w.length : 0;
+  const ttrAI = clamp((.75 - ttr) / .3);
+
+  const persCount = (text.match(PERSONAL) || []).length + (text.match(COLLOQ) || []).length;
+  const persAI = clamp(1 - persCount / total * 100 / 5);
+
+  const overall = clamp(.6 * meanScore + .25 * burstAI + .15 * phraseAI);
+  return { paras, sents, total, overall, cv, burstAI, allHits, phraseAI, ttr, ttrAI, persCount, persAI };
+}
+
+/* Eingabe */
+const input = $("input");
+function updateCount() {
+  const n = words(input.value).length;
+  $("count").textContent = `${n.toLocaleString("de-DE")} ${n === 1 ? "Wort" : "Wörter"}`;
+  $("btn-run").disabled = n < 20;
+  $("example-tag").hidden = input.value !== SAMPLE;
+}
+input.addEventListener("input", updateCount);
+$("btn-example").onclick = () => { input.value = SAMPLE; updateCount(); input.focus(); };
+$("btn-clear").onclick = () => { input.value = ""; updateCount(); input.focus(); };
+
+function showNotice(msg) { const n = $("notice"); n.textContent = msg; n.hidden = !msg; }
+function readFile(f) {
+  if (!f) return;
+  if (!/\.txt$/i.test(f.name) && f.type !== "text/plain") { showNotice("Im Entwurf gehen nur .txt-Dateien. Word und PDF folgen."); return; }
+  const r = new FileReader();
+  r.onload = () => { input.value = String(r.result); updateCount(); showNotice(""); };
+  r.readAsText(f);
+}
+$("file").addEventListener("change", e => readFile(e.target.files[0]));
+const sheet = $("sheet");
+["dragenter", "dragover"].forEach(ev => sheet.addEventListener(ev, e => { e.preventDefault(); sheet.classList.add("drag"); }));
+["dragleave", "drop"].forEach(ev => sheet.addEventListener(ev, () => sheet.classList.remove("drag")));
+sheet.addEventListener("drop", e => { e.preventDefault(); readFile(e.dataTransfer.files[0]); });
+
+/* Ansichten */
+function show(name) {
+  ["input", "busy", "result"].forEach(v => $("view-" + v).hidden = v !== name);
+  window.scrollTo({ top: 0 });
+}
+
+const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+let lastResult = null;
+$("btn-run").onclick = () => {
+  const res = analyze(input.value);
+  show("busy");
+  const items = [...$("steps").children];
+  items.forEach(li => li.className = "");
+  const step = reduced ? 150 : 650;
+  items.forEach((li, i) => {
+    setTimeout(() => { li.className = "active"; if (i) items[i - 1].className = "done"; }, i * step);
+  });
+  setTimeout(() => { items.at(-1).className = "done"; }, items.length * step);
+  setTimeout(() => renderResult(res), items.length * step + 250);
+};
+$("btn-new").onclick = () => { show("input"); input.focus(); };
+
+/* Ergebnis */
+function renderResult(r) {
+  lastResult = r;
+  const idx = Math.round(r.overall * 100);
+  const lv = r.overall >= .65 ? "ai" : r.overall >= .35 ? "mid" : "human";
+  const V = {
+    human: ["Wirkt überwiegend menschlich", "Wir haben nur wenige KI-typische Merkmale gefunden. Ganz ausschließen lässt sich KI-Hilfe damit nicht."],
+    mid: ["Gemischtes Bild", "Einige Stellen wirken typisch für KI, andere klar persönlich. Möglicherweise wurde KI für Teile des Textes genutzt."],
+    ai: ["Viele KI-typische Merkmale", "Der Text ähnelt stark dem, was KI-Programme schreiben. Ein Beweis ist das nicht: Auch sehr sachliche Texte von Menschen können so wirken."]
+  }[lv];
+  $("verdict-title").textContent = V[0];
+  $("verdict-text").textContent = V[1];
+  $("fact-index").textContent = `${idx} von 100`;
+  $("fact-conf").textContent = r.total < 80 ? "gering, Text sehr kurz" : r.total < 200 ? "mäßig" : "mittel";
+  $("fact-size").textContent = `${r.total.toLocaleString("de-DE")} Wörter, ${r.sents.length} Sätze`;
+
+  const marked = $("marked"); marked.replaceChildren();
+  r.paras.forEach(p => {
+    const el = document.createElement("p");
+    p.forEach((s, i) => {
+      const sp = document.createElement("span");
+      sp.className = "s " + level(s.score);
+      sp.textContent = s.text;
+      sp.tabIndex = 0; sp.setAttribute("role", "button");
+      sp.setAttribute("aria-label", `Satz ${LEVEL_TEXT[level(s.score)]}: ${s.text}`);
+      sp.onclick = () => selectSentence(sp, s);
+      sp.onkeydown = e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); selectSentence(sp, s); } };
+      el.append(sp, i < p.length - 1 ? " " : "");
+    });
+    marked.append(el);
+  });
+  const top = [...marked.querySelectorAll(".s")].reduce((best, el, i) => r.sents[i].score > (best ? best.s.score : -1) ? { el, s: r.sents[i] } : best, null);
+
+  const leanOf = v => v >= .6 ? ["ai", "spricht für KI"] : v >= .4 ? ["mid", "neutral"] : ["human", "spricht für Mensch"];
+  const sig = [
+    ["Satzlängen", r.burstAI, `Menschen schreiben mal kurz, mal lang. Hier schwanken die Sätze ${r.cv > .5 ? "deutlich" : r.cv > .3 ? "etwas" : "kaum"}.`],
+    ["Typische KI-Formulierungen", r.phraseAI, r.allHits.length ? `${r.allHits.length} gefunden, z. B. „${[...new Set(r.allHits)].slice(0, 3).join("“, „")}“.` : "Keine der typischen Floskeln gefunden."],
+    ["Persönliches & Umgangssprache", r.persAI, r.persCount ? `${r.persCount} Stellen mit „ich“, „wir“ oder Alltagssprache. Das ist bei KI selten.` : "Kaum persönliche oder umgangssprachliche Stellen."],
+    ["Wortvielfalt", r.ttrAI, `${Math.round(r.ttr * 100)} % der Wörter kommen nur einmal vor. Bei kurzen Texten ist das wenig aussagekräftig.`]
+  ];
+  const list = $("signals"); list.replaceChildren();
+  sig.forEach(([name, v, txt]) => {
+    const [cls, lean] = leanOf(v);
+    const li = document.createElement("li"); li.className = "signal";
+    li.innerHTML = `<div class="signal-top"><strong></strong><span class="lean ${cls}"></span></div><div class="bar"><i style="width:0;background:var(--${cls})"></i></div><p></p>`;
+    li.querySelector("strong").textContent = name;
+    li.querySelector(".lean").textContent = lean;
+    li.querySelector("p").textContent = txt;
+    list.append(li);
+    requestAnimationFrame(() => requestAnimationFrame(() => li.querySelector("i").style.width = Math.max(4, v * 100) + "%"));
+  });
+
+  show("result");
+  $("marker").style.left = "0%";
+  requestAnimationFrame(() => requestAnimationFrame(() => $("marker").style.left = idx + "%"));
+  if (top) selectSentence(top.el, top.s);
+}
+
+function selectSentence(el, s) {
+  document.querySelectorAll(".s.sel").forEach(x => x.classList.remove("sel"));
+  el.classList.add("sel");
+  const lv = level(s.score);
+  const d = $("detail"); d.replaceChildren();
+  const eb = document.createElement("p"); eb.className = "eyebrow"; eb.textContent = "Satz im Detail";
+  const q = document.createElement("p"); q.className = "quote"; q.textContent = `„${s.text}“`;
+  const pill = document.createElement("span"); pill.className = "pill " + lv; pill.textContent = LEVEL_TEXT[lv][0].toUpperCase() + LEVEL_TEXT[lv].slice(1);
+  const ul = document.createElement("ul"); ul.className = "reasons";
+  s.reasons.forEach(([sign, txt]) => {
+    const li = document.createElement("li");
+    const sg = document.createElement("span");
+    sg.className = "sign " + (sign > 0 ? "plus" : sign < 0 ? "minus" : "zero");
+    sg.textContent = sign > 0 ? "+" : sign < 0 ? "−" : "·";
+    sg.title = sign > 0 ? "spricht für KI" : sign < 0 ? "spricht für Mensch" : "";
+    const t = document.createElement("span"); t.textContent = txt;
+    li.append(sg, t); ul.append(li);
+  });
+  const key = document.createElement("p"); key.style.cssText = "font-size:12px;color:var(--muted)";
+  key.textContent = "+ spricht für KI   − spricht für Mensch";
+  d.append(eb, q, pill, ul, key);
+}
+
+let toastTimer;
+function toast(msg) { const t = $("toast"); t.textContent = msg; t.hidden = false; clearTimeout(toastTimer); toastTimer = setTimeout(() => t.hidden = true, 2200); }
+$("btn-copy").onclick = () => {
+  if (!lastResult) return;
+  const txt = `Textlupe-Einschätzung: ${$("verdict-title").textContent} (KI-Merkmale ${Math.round(lastResult.overall * 100)} von 100, Aussagekraft ${$("fact-conf").textContent}). Hinweis: Das ist eine Einschätzung, kein Beweis.`;
+  navigator.clipboard.writeText(txt).then(() => toast("Ergebnis kopiert"), () => toast("Kopieren nicht möglich. Bitte Text manuell markieren."));
+};
+
+input.value = SAMPLE;
+updateCount();
+</script>
