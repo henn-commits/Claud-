@@ -117,7 +117,7 @@ p { margin: 0; }
 .nav-btn.right svg { width: 20px; height: 22px; stroke-width: 1.8; }
 
 /* Tab-Leiste */
-.tabbar { position: absolute; inset: auto 0 0; z-index: 25; display: grid; grid-template-columns: repeat(3, 1fr);
+.tabbar { position: absolute; inset: auto 0 0; z-index: 25; display: grid; grid-template-columns: repeat(4, 1fr);
   padding-bottom: var(--bottom); background: var(--bar); border-top: .5px solid var(--sep);
   -webkit-backdrop-filter: saturate(180%) blur(20px); backdrop-filter: saturate(180%) blur(20px); }
 .tabbar button { height: 49px; display: grid; justify-items: center; align-content: center; gap: 2px; font-size: 10px; font-weight: 500; color: var(--muted); }
@@ -214,6 +214,64 @@ textarea:focus { outline: none; }
 .info-text + .info-text { margin-top: 8px; }
 .info-card { background: var(--card); border-radius: 12px; padding: 14px 16px; }
 
+/* Navigation mit mehreren Ebenen */
+.navbar { transition: transform .38s cubic-bezier(.3,.9,.3,1), opacity .25s; }
+.navbar.nav-under { opacity: 0; transform: translateX(-28%); pointer-events: none; }
+.nav-btn.right .copy-ic { width: 20px; height: 20px; }
+
+/* Überarbeiten */
+.rw-summary { background: var(--card); border-radius: 12px; padding: 16px; display: grid; gap: 8px; }
+.rw-summary .primary { margin-top: 6px; }
+.muted-text { font-size: 15px; color: var(--muted); }
+.rw-text { display: block; white-space: pre-wrap; }
+.rw-old { text-decoration: underline wavy var(--ai); text-underline-offset: 4px; text-decoration-thickness: 1.5px; cursor: pointer; }
+.rw-new { background: var(--zone-human); border-radius: 3px; }
+.sw.wavy { border: 0; border-bottom: 2px dotted var(--ai); border-radius: 0; height: 8px; }
+.sw.new { background: var(--zone-human); }
+.sugg { display: grid; gap: 10px; }
+.sugg-card { background: var(--card); border-radius: 12px; padding: 14px 16px; display: grid; gap: 10px; transition: box-shadow .3s; }
+.sugg-card.flash { box-shadow: 0 0 0 2px var(--accent); }
+.sugg-line { display: grid; grid-template-columns: 40px minmax(0, 1fr); gap: 8px; font: 15px/1.5 var(--f-text); }
+.sugg-line .lab { font: 600 11px/1 var(--f-mono); text-transform: uppercase; letter-spacing: .06em; padding-top: 5px; }
+.lab.old { color: var(--ai); } .lab.new { color: var(--human); } .lab.tip { color: var(--accent); }
+.sugg-line.tip-line { font: 14px/1.45 var(--f-ui); }
+del.ph { background: var(--hl-mid); text-decoration: line-through; text-decoration-color: var(--ai); border-radius: 3px; }
+ins.ph { background: var(--zone-human); text-decoration: none; border-radius: 3px; }
+ins.ph.gone { font: italic 13px var(--f-ui); color: var(--muted); padding: 0 4px; }
+.sugg-actions { display: flex; gap: 8px; }
+.small-btn { flex: 1; height: 38px; border-radius: 10px; background: var(--fill); color: var(--accent); font-weight: 600; font-size: 15px; }
+.small-btn.ok { background: var(--accent); color: var(--accent-ink); }
+.sugg-status { display: flex; justify-content: space-between; align-items: center; font-size: 14px; color: var(--muted); }
+.sugg-status .link { color: var(--accent); font-weight: 500; }
+.sugg-card.settled .sugg-line { opacity: .55; }
+
+/* Planen */
+.field-stack { display: grid; gap: 2px; padding: 10px 16px; }
+.field-stack span { font-size: 13px; color: var(--muted); }
+.field-stack input { border: 0; background: transparent; color: var(--ink); font: inherit; padding: 2px 0; width: 100%; }
+.row input[type="date"], .row select { border: 0; background: transparent; color: var(--accent); font: inherit; text-align: right; min-width: 0; }
+.field-stack input:focus, .row input:focus, .row select:focus { outline: none; }
+.seg { display: grid; grid-template-columns: repeat(3, 1fr); background: var(--fill); border-radius: 9px; padding: 2px; width: 100%; }
+.seg button { height: 32px; border-radius: 7px; font-size: 14px; font-weight: 500; }
+.seg button[aria-pressed="true"] { background: var(--card); box-shadow: 0 1px 3px rgba(0,0,0,.14); font-weight: 600; }
+.ch { display: grid; gap: 4px; padding: 12px 16px; position: relative; }
+.ch + .ch::before, .ch + .row::before, .row + .ch::before { content: ""; position: absolute; top: 0; left: 16px; right: 0; border-top: .5px solid var(--sep); }
+.ch-top { display: flex; justify-content: space-between; gap: 10px; align-items: baseline; }
+.ch-top b { font-weight: 600; font-size: 16px; }
+.ch-pages { font: 13px var(--f-mono); color: var(--muted); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.ch ul { margin: 2px 0 0; padding-left: 18px; font-size: 14px; color: var(--muted); display: grid; gap: 2px; }
+.now { font-size: 11px; font-weight: 700; color: var(--accent-ink); background: var(--accent); padding: 2px 7px; border-radius: 999px; margin-left: 6px; vertical-align: 2px; }
+.warn { font-size: 14px; color: var(--ai); background: var(--hl-mid); border-radius: 10px; padding: 10px 12px; margin-top: 10px; }
+.cite { display: grid; gap: 10px; }
+.cite div { display: grid; gap: 2px; }
+.cite span { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+.cite p { font: 15px/1.5 var(--f-text); overflow-wrap: anywhere; }
+.check-row { cursor: pointer; }
+.check-row input { appearance: none; -webkit-appearance: none; flex: none; width: 22px; height: 22px; border-radius: 50%; border: 2px solid var(--sep); display: grid; place-items: center; margin: 0; cursor: pointer; }
+.check-row input:checked { background: var(--accent); border-color: var(--accent); }
+.check-row input:checked::after { content: ""; width: 9px; height: 5px; border: 2px solid var(--accent-ink); border-top: 0; border-right: 0; transform: rotate(-45deg) translate(1px, -1px); }
+.check-row input:checked + span { color: var(--muted); text-decoration: line-through; }
+
 /* Bottom Sheet */
 .backdrop { position: absolute; inset: 0; z-index: 50; background: rgba(0,0,0,.32); opacity: 0; transition: opacity .3s; }
 .backdrop.open { opacity: 1; }
@@ -305,7 +363,7 @@ textarea:focus { outline: none; }
 
         <div class="navbar offscreen" id="nav-result">
           <div class="navbar-inner">
-            <button class="nav-btn" id="btn-back" type="button" aria-label="Zurück zu Prüfen">
+            <button class="nav-btn" data-back type="button" aria-label="Zurück zu Prüfen">
               <svg viewBox="0 0 12 20"><path d="M10 2L2 10l8 8"/></svg>Prüfen
             </button>
             <h2>Ergebnis</h2>
@@ -328,6 +386,13 @@ textarea:focus { outline: none; }
           <div class="group" style="margin-top:12px">
             <div class="row"><span class="grow">Aussagekraft</span><span class="value" id="fact-conf"></span></div>
             <div class="row"><span class="grow">Umfang</span><span class="value" id="fact-size"></span></div>
+          </div>
+
+          <div class="group" style="margin-top:12px">
+            <button class="row" id="btn-open-edit" type="button">
+              <span class="grow">Stil überarbeiten<br><span class="sub" id="edit-sub">Vorschläge mit Alt und Neu</span></span>
+              <svg class="chev" viewBox="0 0 8 14"><path d="M1 1l6 6-6 6"/></svg>
+            </button>
           </div>
 
           <p class="section-head">Statistik</p>
@@ -360,6 +425,60 @@ textarea:focus { outline: none; }
             <p class="info-text">Kein Programm erkennt KI-Texte sicher. Nutze das Ergebnis nicht, um jemandem Betrug vorzuwerfen.</p>
             <p class="info-text">Sachliche Texte, Bewerbungen und Texte von Nicht-Muttersprachlern werden öfter fälschlich markiert.</p>
           </div>
+        </div>
+
+        <div class="navbar offscreen" id="nav-edit">
+          <div class="navbar-inner">
+            <button class="nav-btn" data-back type="button" aria-label="Zurück zum Ergebnis">
+              <svg viewBox="0 0 12 20"><path d="M10 2L2 10l8 8"/></svg>Ergebnis
+            </button>
+            <h2>Überarbeiten</h2>
+            <button class="nav-btn right" id="btn-copy-edit" type="button" aria-label="Text kopieren">
+              <svg class="copy-ic" viewBox="0 0 20 20"><rect x="6" y="6" width="11" height="12" rx="2"/><path d="M3 13V4a2 2 0 0 1 2-2h8"/></svg>
+            </button>
+          </div>
+        </div>
+        <div class="page with-nav offscreen" id="page-edit">
+          <div class="rw-summary">
+            <div class="stat-top"><b id="rw-count">0</b><span id="rw-count-label">offene Vorschläge</span></div>
+            <p class="muted-text">Steife Formulierungen und typische Floskeln, jeweils mit Alt und Neu. Du entscheidest bei jedem Vorschlag selbst.</p>
+            <button class="primary" id="btn-accept-all" type="button">Alle Ersetzungen übernehmen</button>
+          </div>
+
+          <p class="section-head">Dein Text</p>
+          <div class="marked-card">
+            <div class="legend"><span><i class="sw wavy"></i>Vorschlag offen</span><span><i class="sw new"></i>übernommen</span></div>
+            <div class="marked rw-text" id="rw-text"></div>
+          </div>
+          <p class="section-foot">Tippe auf eine markierte Stelle, um zum Vorschlag zu springen.</p>
+
+          <p class="section-head">Vorschläge</p>
+          <div class="sugg" id="rw-list"></div>
+
+          <button class="primary" id="btn-recheck" type="button">Überarbeiteten Text prüfen</button>
+          <p class="section-foot">Die Vorschläge machen Formulierungen natürlicher. Wer einen Text verfasst hat, ändern sie nicht.</p>
+        </div>
+      </section>
+
+      <!-- Tab: Planen -->
+      <section class="tab" id="tab-plan" hidden>
+        <div class="page">
+          <h1 class="large-title">Planen</h1>
+          <p class="subtitle">Gliederung, Zeitplan und Zitierregeln für deine wissenschaftliche Arbeit. Schreiben tust du selbst.</p>
+          <div class="group">
+            <label class="field-stack" for="plan-topic"><span>Thema</span><input id="plan-topic" type="text" autocomplete="off" placeholder="Worum geht es in deiner Arbeit?"></label>
+            <div class="row"><div class="seg" id="plan-type" role="group" aria-label="Art der Arbeit">
+              <button type="button" data-type="haus" aria-pressed="false">Hausarbeit</button>
+              <button type="button" data-type="bachelor" aria-pressed="true">Bachelor</button>
+              <button type="button" data-type="master" aria-pressed="false">Master</button>
+            </div></div>
+            <label class="row" for="plan-date"><span class="grow">Abgabe</span><input type="date" id="plan-date"></label>
+            <label class="row" for="plan-style"><span class="grow">Zitierstil</span>
+              <select id="plan-style"><option value="apa">APA 7</option><option value="harvard">Harvard</option><option value="fussnote">Fußnoten</option></select>
+            </label>
+          </div>
+          <p class="section-foot" id="plan-example-note">Beispielthema eingetragen. Ersetze es durch dein eigenes, der Plan passt sich sofort an.</p>
+          <div id="plan-out"></div>
         </div>
       </section>
 
@@ -395,7 +514,7 @@ textarea:focus { outline: none; }
           </div>
           <p class="section-head">App</p>
           <div class="group">
-            <div class="row"><span class="grow">Version</span><span class="value">Entwurf 0.3</span></div>
+            <div class="row"><span class="grow">Version</span><span class="value">Entwurf 0.4</span></div>
           </div>
         </div>
       </section>
@@ -403,6 +522,9 @@ textarea:focus { outline: none; }
       <nav class="tabbar" role="tablist">
         <button type="button" role="tab" aria-selected="true" data-tab="check">
           <svg viewBox="0 0 26 24"><circle cx="11" cy="10" r="7"/><path d="M16 15l6 6"/></svg>Prüfen
+        </button>
+        <button type="button" role="tab" aria-selected="false" data-tab="plan">
+          <svg viewBox="0 0 26 24"><path d="M7 3h9l4 4v14H7z"/><path d="M10 11h7M10 15h7M10 19h4"/></svg>Planen
         </button>
         <button type="button" role="tab" aria-selected="false" data-tab="checks">
           <svg viewBox="0 0 26 24"><circle cx="13" cy="12" r="9"/><path d="M13 7v5l3 2"/></svg>Verlauf
@@ -603,26 +725,35 @@ $("file").addEventListener("change", e => { readFile(e.target.files[0]); e.targe
 
 /* Tabs und Navigation */
 function showTab(name) {
-  ["check", "checks", "info"].forEach(t => $("tab-" + t).hidden = t !== name);
+  ["check", "plan", "checks", "info"].forEach(t => $("tab-" + t).hidden = t !== name);
   document.querySelectorAll(".tabbar button").forEach(b => b.setAttribute("aria-selected", b.dataset.tab === name));
   if (name === "checks") renderHistory();
 }
 document.querySelectorAll(".tabbar button").forEach(b => b.onclick = () => {
-  if (b.dataset.tab === "check" && !$("tab-check").hidden) popResult();
+  if (b.dataset.tab === "check" && !$("tab-check").hidden) popToRoot();
   showTab(b.dataset.tab);
 });
-function pushResult() {
-  $("page-result").scrollTop = 0;
-  $("page-check").classList.add("pushed-under");
-  $("page-result").classList.remove("offscreen");
-  $("nav-result").classList.remove("offscreen");
+// Stapel im Tab Prüfen: check → result → edit
+const stack = ["check"];
+function place(name, pos) {
+  const page = $("page-" + name), nav = $("nav-" + name);
+  page.classList.toggle("offscreen", pos === "off");
+  page.classList.toggle("pushed-under", pos === "under");
+  if (nav) { nav.classList.toggle("offscreen", pos === "off"); nav.classList.toggle("nav-under", pos === "under"); }
 }
-function popResult() {
-  $("page-check").classList.remove("pushed-under");
-  $("page-result").classList.add("offscreen");
-  $("nav-result").classList.add("offscreen");
+function push(name) {
+  $("page-" + name).scrollTop = 0;
+  place(stack.at(-1), "under");
+  place(name, "on");
+  stack.push(name);
 }
-$("btn-back").onclick = popResult;
+function pop() {
+  if (stack.length < 2) return;
+  place(stack.pop(), "off");
+  place(stack.at(-1), "on");
+}
+function popToRoot() { while (stack.length > 1) pop(); }
+document.querySelectorAll("[data-back]").forEach(b => b.onclick = pop);
 
 /* Bottom Sheet */
 let sheetClosable = true;
@@ -661,7 +792,7 @@ $("btn-run").onclick = () => {
     closeSheet();
     renderResult(res);
     addHistory(text, res, fileName);
-    pushResult();
+    push("result");
   }, 300 + items.length * step + 300);
 };
 
@@ -797,12 +928,264 @@ function renderHistory() {
     row.onclick = () => {
       input.value = h.text; setFileTag(h.file || ""); updateCount();
       renderResult(analyze(h.text));
-      showTab("check"); pushResult();
+      showTab("check"); popToRoot(); push("result");
     };
     box.append(row);
   });
 }
 $("btn-clear-checks").onclick = () => { checks = []; saveHistory(); renderHistory(); toast("Verlauf gelöscht"); };
+
+/* Überarbeiten: Vorschläge für steife Formulierungen. Ersatz null heißt: nur ein Tipp, weil der Satz umgebaut werden muss. */
+const RULES = [
+  ["es ist wichtig zu beachten, dass", null, "Lass die Einleitung weg und sag direkt, was gilt. Dafür musst du den Satz umbauen."],
+  ["zusammenfassend lässt sich sagen, dass", null, "Kürzer: „Kurz gesagt:“ und danach ein normaler Hauptsatz."],
+  ["darüber hinaus", "außerdem"],
+  ["spielt eine entscheidende rolle", "ist entscheidend"],
+  ["spielt eine wichtige rolle", "ist wichtig"],
+  ["spielt eine zentrale rolle", "ist zentral"],
+  ["in der heutigen zeit", "heute"],
+  ["von großer bedeutung", "sehr wichtig"],
+  ["bietet zahlreiche", "hat viele"],
+  ["eine vielzahl von", "viele"],
+  ["zahlreich(e[nmrs]?)", "viel$1"],
+  ["letztendlich", "am Ende"],
+  ["maßgeblich(e[nmrs]?)?", "stark$1"],
+  ["zudem", "außerdem"],
+  ["nachweislich", "", "Nur stehen lassen, wenn du eine Quelle nennst."],
+  ["nachhaltig(e[nmrs]?)?", "", "Oft ein Füllwort. Streichen, wenn es nicht um Umwelt oder Dauer geht."],
+  ["ganzheitlich(e[nmrs]?)?", null, "Sehr allgemein. Schreib, was genau gemeint ist."],
+  ["sowohl", null, "„sowohl … als auch“ klingt steif. Oft reicht „und“."],
+  ["es ist wichtig", null, "Sag lieber direkt, warum etwas wichtig ist."],
+  ["ein wichtiger aspekt", null, "Nenne den Aspekt direkt."],
+  ["im folgenden", null, "Oft überflüssig. Fang direkt mit dem Inhalt an."],
+  ["tauchen sie ein", null, "Werbesprache. Beschreib es lieber sachlich."]
+];
+const cap = s => s ? s[0].toUpperCase() + s.slice(1) : s;
+let segs = [], rwSource = "";
+
+function buildSegments(text) {
+  const marks = [];
+  RULES.forEach(([src, repl, tip]) => {
+    const re = new RegExp(`(?<!\\p{L})(?:${src})(?!\\p{L})`, "giu");
+    for (const m of text.matchAll(re)) {
+      const start = m.index, end = start + m[0].length;
+      if (marks.some(x => start < x.end && end > x.start)) continue;
+      let nw = repl === null ? null : m[0].replace(new RegExp(src, "iu"), repl);
+      if (nw && /\p{Lu}/u.test(m[0][0])) nw = cap(nw);
+      marks.push({ start, end, old: m[0], new: nw, tip: tip || "", status: "open" });
+    }
+  });
+  marks.sort((a, b) => a.start - b.start);
+  const out = []; let pos = 0;
+  marks.forEach(mk => { if (mk.start > pos) out.push(text.slice(pos, mk.start)); out.push(mk); pos = mk.end; });
+  if (pos < text.length) out.push(text.slice(pos));
+  return out;
+}
+const suggestions = () => segs.filter(s => typeof s !== "string");
+function editedText() {
+  return segs.map(s => typeof s === "string" ? s : s.status === "accepted" ? s.new : s.old).join("")
+    .replace(/ {2,}/g, " ").replace(/ ([,.!?;:])/g, "$1");
+}
+// Satz um die Fundstelle herum, gekürzt auf etwa 70 Zeichen je Seite.
+function contextOf(mk) {
+  let a = rwSource.lastIndexOf(".", mk.start - 1);
+  a = Math.max(a, rwSource.lastIndexOf("\n", mk.start - 1), rwSource.lastIndexOf("!", mk.start - 1), rwSource.lastIndexOf("?", mk.start - 1)) + 1;
+  const rest = rwSource.slice(mk.end), b = rest.search(/[.!?\n]/);
+  let before = rwSource.slice(a, mk.start).trimStart(), after = b < 0 ? rest : rest.slice(0, b + 1);
+  if (before.length > 70) before = "… " + before.slice(-70).replace(/^\S*\s/, "");
+  if (after.length > 70) after = after.slice(0, 70).replace(/\s\S*$/, "") + " …";
+  return [before, after];
+}
+
+function openEdit() {
+  rwSource = input.value;
+  segs = buildSegments(rwSource);
+  renderEdit();
+  push("edit");
+}
+function renderEdit() {
+  const list = suggestions(), open = list.filter(s => s.status === "open");
+  $("rw-count").textContent = open.length;
+  $("rw-count-label").textContent = open.length === 1 ? "offener Vorschlag" : "offene Vorschläge";
+  $("btn-accept-all").disabled = !open.some(s => s.new !== null);
+
+  const txt = $("rw-text"); txt.replaceChildren();
+  segs.forEach(s => {
+    if (typeof s === "string") { txt.append(s); return; }
+    if (s.status === "accepted") { if (s.new) txt.append(el("span", "rw-new", s.new)); return; }
+    if (s.status === "open") {
+      const sp = el("span", "rw-old", s.old);
+      sp.onclick = () => { const c = s.card; c.scrollIntoView({ behavior: reduced ? "auto" : "smooth", block: "center" }); c.classList.add("flash"); setTimeout(() => c.classList.remove("flash"), 1200); };
+      txt.append(sp); return;
+    }
+    txt.append(s.old);
+  });
+
+  const box = $("rw-list"); box.replaceChildren();
+  if (!list.length) { box.append(el("p", "empty", "Keine steifen Formulierungen gefunden.")); return; }
+  list.forEach(s => {
+    const card = el("div", "sugg-card" + (s.status === "open" ? "" : " settled")); s.card = card;
+    const [before, after] = contextOf(s);
+    const line = (lab, cls, node) => { const l = el("div", "sugg-line"); const p = el("p"); p.append(before, node, after); l.append(el("span", "lab " + cls, lab), p); return l; };
+    card.append(line("Alt", "old", el("del", "ph", s.old)));
+    if (s.new !== null) card.append(line("Neu", "new", s.new ? el("ins", "ph", s.new) : el("ins", "ph gone", "gestrichen")));
+    if (s.tip) { const t = el("div", "sugg-line tip-line"); t.append(el("span", "lab tip", "Tipp"), el("p", null, s.tip)); card.append(t); }
+    if (s.status === "open") {
+      const act = el("div", "sugg-actions");
+      if (s.new !== null) {
+        const keep = el("button", "small-btn", "Behalten"), ok = el("button", "small-btn ok", s.new ? "Übernehmen" : "Streichen");
+        keep.type = ok.type = "button";
+        keep.onclick = () => { s.status = "kept"; renderEdit(); };
+        ok.onclick = () => { s.status = "accepted"; renderEdit(); };
+        act.append(keep, ok);
+      } else {
+        const got = el("button", "small-btn", "Verstanden"); got.type = "button";
+        got.onclick = () => { s.status = "kept"; renderEdit(); };
+        act.append(got);
+      }
+      card.append(act);
+    } else {
+      const st = el("div", "sugg-status"), undo = el("button", "link", "Rückgängig"); undo.type = "button";
+      undo.onclick = () => { s.status = "open"; renderEdit(); };
+      st.append(el("span", null, s.status === "accepted" ? (s.new ? "Übernommen" : "Gestrichen") : s.new === null ? "Gelesen" : "Behalten"), undo);
+      card.append(st);
+    }
+    box.append(card);
+  });
+}
+$("btn-open-edit").onclick = openEdit;
+$("btn-accept-all").onclick = () => {
+  const n = suggestions().filter(s => s.status === "open" && s.new !== null).map(s => s.status = "accepted").length;
+  renderEdit(); toast(`${n} ${n === 1 ? "Ersetzung" : "Ersetzungen"} übernommen`);
+};
+$("btn-copy-edit").onclick = () => navigator.clipboard.writeText(editedText()).then(() => toast("Text kopiert"), () => toast("Kopieren nicht möglich"));
+$("btn-recheck").onclick = () => {
+  const text = editedText();
+  input.value = text; setFileTag(""); updateCount();
+  const res = analyze(text);
+  renderResult(res); addHistory(text, res, "");
+  pop(); $("page-result").scrollTop = 0;
+  toast("Überarbeiteter Text geprüft");
+};
+
+/* Planen: Gliederung, Zeitplan, Zitierbeispiele und Checkliste. Alles regelbasiert, nichts wird geschrieben. */
+const PLAN_EXAMPLE = "Einfluss von Homeoffice auf die Work-Life-Balance";
+const PAGES = { haus: 15, bachelor: 40, master: 70 };
+const CHAPTERS = {
+  haus: [
+    ["Einleitung", .12, ["Warum ist „{T}“ interessant?", "Welche Frage beantwortest du?", "Wie gehst du vor?"]],
+    ["Begriffe und Grundlagen", .25, ["Welche Begriffe musst du klären?", "Auf welche Theorien oder Modelle stützt du dich?"]],
+    ["Analyse", .5, ["Welche Positionen oder Argumente untersuchst du?", "Welche Quellen stützen sie, welche widersprechen?"]],
+    ["Fazit", .13, ["Beantworte deine Frage in wenigen Sätzen.", "Was bleibt offen?"]]
+  ],
+  full: [
+    ["Einleitung", .10, ["Warum ist „{T}“ relevant?", "Welche Forschungsfrage beantwortest du?", "Wie ist die Arbeit aufgebaut?"]],
+    ["Theorie und Forschungsstand", .28, ["Welche Begriffe musst du definieren?", "Was sagt die bisherige Forschung zu „{T}“?", "Welche Lücke füllst du?"]],
+    ["Methode", .15, ["Wie gehst du vor: Literaturanalyse, Umfrage, Interviews oder Experiment?", "Warum passt diese Methode zu deiner Frage?", "Wo liegen ihre Grenzen?"]],
+    ["Ergebnisse", .20, ["Was hast du herausgefunden?", "Welche Tabellen oder Abbildungen zeigen es am klarsten?"]],
+    ["Diskussion", .19, ["Was bedeuten die Ergebnisse für deine Frage?", "Wie passen sie zum Forschungsstand?", "Was schränkt die Aussagekraft ein?"]],
+    ["Fazit und Ausblick", .08, ["Beantworte die Forschungsfrage in wenigen Sätzen.", "Welche Fragen bleiben für die Forschung offen?"]]
+  ]
+};
+const PHASES = [
+  ["Thema eingrenzen, Literatur suchen", .18], ["Gliederung und Forschungsfrage festlegen", .10],
+  ["Material sammeln, Methode durchführen", .20], ["Rohfassung schreiben", .30],
+  ["Überarbeiten", .14], ["Korrektur lesen, Formales, Abgabe", .08]
+];
+const CITES = {
+  apa: [["Im Text", "(Muster, 2021, S. 14)"], ["Buch", "Muster, A. (2021). Titel des Buches: Untertitel. Verlag."],
+        ["Zeitschriftenartikel", "Muster, A., & Beispiel, B. (2020). Titel des Artikels. Name der Zeitschrift, 12(3), 45–67. https://doi.org/…"]],
+  harvard: [["Im Text", "(Muster 2021, S. 14)"], ["Buch", "Muster, A. (2021) Titel des Buches. Ort: Verlag."],
+        ["Zeitschriftenartikel", "Muster, A. und Beispiel, B. (2020) ‚Titel des Artikels‘, Name der Zeitschrift, 12(3), S. 45–67."]],
+  fussnote: [["Fußnote, erste Nennung", "Anna Muster, Titel des Buches, Ort 2021, S. 14."], ["Fußnote, später", "Muster, Titel, S. 14. Direkt danach: Ebd., S. 15."],
+        ["Literaturverzeichnis", "Muster, Anna: Titel des Buches, Ort 2021."]]
+};
+const CHECKLIST = [
+  "Forschungsfrage im Fazit beantwortet", "Jede zitierte Quelle steht im Literaturverzeichnis", "Zitierstil durchgehend einheitlich",
+  "Inhaltsverzeichnis und Seitenzahlen stimmen", "Formatvorgaben eingehalten (Schrift, Rand, Zeilenabstand)",
+  "KI-Nutzung nach den Regeln deiner Hochschule angegeben", "Rechtschreibung von jemand anderem gegenlesen lassen",
+  "Eigenständigkeitserklärung unterschrieben"
+];
+const CKEY = "textlupe-checkliste";
+let checked = {};
+try { checked = JSON.parse(localStorage.getItem(CKEY)) || {}; } catch (e) { checked = {}; }
+let planType = "bachelor";
+const fmtDate = d => d.toLocaleDateString("de-DE", { day: "numeric", month: "short" });
+
+function renderPlan() {
+  const topic = $("plan-topic").value.trim() || "dein Thema";
+  $("plan-example-note").hidden = $("plan-topic").value !== PLAN_EXAMPLE;
+  const out = $("plan-out"); out.replaceChildren();
+  const head = t => el("p", "section-head", t);
+
+  // Gliederung
+  const pages = PAGES[planType], chs = CHAPTERS[planType === "haus" ? "haus" : "full"];
+  out.append(head(`Gliederung · etwa ${pages} Seiten`));
+  const g = el("div", "group");
+  g.append(Object.assign(el("div", "row"), { innerHTML: '<span class="grow sub">Deckblatt, Inhaltsverzeichnis</span>' }));
+  chs.forEach(([name, share, qs], i) => {
+    const c = el("div", "ch"), top = el("div", "ch-top"), ul = el("ul");
+    top.append(el("b", null, `${i + 1}  ${name}`), el("span", "ch-pages", `ca. ${Math.max(1, Math.round(pages * share))} S.`));
+    qs.forEach(q => ul.append(el("li", null, q.replace("{T}", topic))));
+    c.append(top, ul); g.append(c);
+  });
+  g.append(Object.assign(el("div", "row"), { innerHTML: '<span class="grow sub">Literaturverzeichnis, Anhang, Eigenständigkeitserklärung</span>' }));
+  out.append(g, el("p", "section-foot", "Die Leitfragen beantwortest du in deinen eigenen Worten. Prüfe die Vorgaben deines Lehrstuhls zur Gliederung."));
+
+  // Zeitplan
+  out.append(head("Zeitplan"));
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  const due = $("plan-date").value ? new Date($("plan-date").value + "T00:00") : null;
+  const days = due ? Math.round((due - today) / 864e5) : 0;
+  if (!due || days <= 0) {
+    out.append(el("p", "warn", due ? "Das Abgabedatum liegt in der Vergangenheit. Wähle ein neues Datum." : "Wähle ein Abgabedatum, dann entsteht der Zeitplan."));
+  } else {
+    const t = el("div", "group"); let start = 0;
+    PHASES.forEach(([name, share], i) => {
+      const len = Math.max(1, Math.round(days * share));
+      const a = new Date(today.getTime() + start * 864e5), b = new Date(today.getTime() + Math.min(days, start + len) * 864e5);
+      const row = el("div", "row"), gr = el("span", "grow"), title = el("span", null, name);
+      if (i === 0) title.append(el("span", "now", "jetzt"));
+      gr.append(title, el("br"), el("span", "sub", `${fmtDate(a)} – ${fmtDate(b)}`));
+      row.append(gr, el("span", "value", `${len} ${len === 1 ? "Tag" : "Tage"}`));
+      t.append(row); start += len;
+    });
+    out.append(t, el("p", "section-foot", `${days} Tage bis zur Abgabe am ${due.toLocaleDateString("de-DE", { day: "numeric", month: "long", year: "numeric" })}.`));
+    if (days < 14) out.append(el("p", "warn", "Weniger als zwei Wochen: Konzentriere dich auf Gliederung und Rohfassung. Plane trotzdem einen Tag fürs Korrekturlesen ein."));
+  }
+
+  // Zitieren
+  const style = $("plan-style").value;
+  out.append(head(`Zitieren · ${$("plan-style").selectedOptions[0].textContent}`));
+  const ci = el("div", "info-card cite");
+  CITES[style].forEach(([lab, ex]) => { const d = el("div"); d.append(el("span", null, lab), el("p", null, ex)); ci.append(d); });
+  out.append(ci, el("p", "section-foot", "Welcher Stil gilt, legt dein Institut fest. Eine Literaturverwaltung wie Zotero oder Citavi erstellt die Angaben automatisch."));
+
+  // Checkliste
+  const done = CHECKLIST.filter((_, i) => checked[i]).length;
+  out.append(head(`Vor der Abgabe · ${done} von ${CHECKLIST.length}`));
+  const cl = el("div", "group");
+  CHECKLIST.forEach((item, i) => {
+    const row = el("label", "row check-row"), cb = el("input");
+    cb.type = "checkbox"; cb.id = "ck-" + i; cb.checked = !!checked[i];
+    cb.onchange = () => { checked[i] = cb.checked; try { localStorage.setItem(CKEY, JSON.stringify(checked)); } catch (e) {} renderPlan(); };
+    row.htmlFor = cb.id;
+    row.append(cb, el("span", "grow", item));
+    cl.append(row);
+  });
+  out.append(cl);
+}
+$("plan-topic").addEventListener("input", renderPlan);
+$("plan-date").addEventListener("change", renderPlan);
+$("plan-style").addEventListener("change", renderPlan);
+document.querySelectorAll("#plan-type button").forEach(b => b.onclick = () => {
+  planType = b.dataset.type;
+  document.querySelectorAll("#plan-type button").forEach(x => x.setAttribute("aria-pressed", x === b));
+  renderPlan();
+});
+$("plan-topic").value = PLAN_EXAMPLE;
+$("plan-date").value = new Date(Date.now() + 90 * 864e5).toISOString().slice(0, 10);
+renderPlan();
 
 input.value = SAMPLE;
 updateCount();
