@@ -1,0 +1,773 @@
+<title>Textlupe für iPhone</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,500&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: iPhone-App im Gerätrahmen (Desktop) oder vollflächig (Handy). Tabs Prüfen / Verlauf / Info, Ergebnis als Push-Ansicht, Details als Bottom Sheet. */
+:root {
+  --desk: #DCE0E8;
+  --bezel: #16181D;
+  --bg: #F2F2F7;
+  --card: #FFFFFF;
+  --ink: #111318;
+  --muted: #6B6F7B;
+  --sep: #E2E3E9;
+  --fill: #E9EAF0;
+  --bar: rgba(248, 248, 251, .86);
+  --accent: #2C47B0;
+  --accent-ink: #FFFFFF;
+  --hl-ai: rgba(255, 190, 0, .48);
+  --hl-mid: rgba(255, 190, 0, .2);
+  --ai: #9A5B00;
+  --mid: #5F6676;
+  --human: #24704F;
+  --zone-human: #D3EADD;
+  --zone-mid: #E4E7EE;
+  --zone-ai: #FBE2A4;
+  --f-ui: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, system-ui, sans-serif;
+  --f-text: ui-serif, "New York", "Source Serif 4", Georgia, serif;
+  --f-mono: ui-monospace, "SF Mono", "IBM Plex Mono", Menlo, monospace;
+  --top: 54px;
+  --bottom: 34px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --desk: #0A0C10; --bezel: #2B2E36; --bg: #000000; --card: #1C1C1E; --ink: #F2F3F5; --muted: #9A9FAA;
+    --sep: #2E2E33; --fill: #2A2A2E; --bar: rgba(20, 20, 22, .86); --accent: #93A8FF; --accent-ink: #0B0D12;
+    --hl-ai: rgba(255, 190, 0, .34); --hl-mid: rgba(255, 190, 0, .14);
+    --ai: #F2B54C; --mid: #9BA4B6; --human: #72CDA2;
+    --zone-human: #1C3A2C; --zone-mid: #2A2F3A; --zone-ai: #4A3912;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --desk: #0A0C10; --bezel: #2B2E36; --bg: #000000; --card: #1C1C1E; --ink: #F2F3F5; --muted: #9A9FAA;
+  --sep: #2E2E33; --fill: #2A2A2E; --bar: rgba(20, 20, 22, .86); --accent: #93A8FF; --accent-ink: #0B0D12;
+  --hl-ai: rgba(255, 190, 0, .34); --hl-mid: rgba(255, 190, 0, .14);
+  --ai: #F2B54C; --mid: #9BA4B6; --human: #72CDA2;
+  --zone-human: #1C3A2C; --zone-mid: #2A2F3A; --zone-ai: #4A3912;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body { height: 100%; }
+body { background: var(--desk); color: var(--ink); font: 17px/1.4 var(--f-ui); }
+button { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; }
+p { margin: 0; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 6px; }
+
+/* Bühne mit Gerät */
+.stage { min-height: 100%; display: grid; justify-items: center; align-content: center; gap: 16px;
+  padding-block: 24px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+.device { position: relative; width: 393px; height: 852px; max-width: 100%; border-radius: 58px; padding: 12px; background: var(--bezel);
+  box-shadow: 0 30px 60px -20px rgba(0,0,0,.35); }
+.screen { position: relative; width: 100%; height: 100%; border-radius: 46px; overflow: hidden; background: var(--bg); isolation: isolate; }
+.caption { font-size: 13px; color: var(--muted); text-align: center; max-width: 393px; }
+.caption strong { color: var(--ink); font-weight: 600; }
+
+.statusbar { position: absolute; inset: 0 0 auto; height: var(--top); display: flex; align-items: center; justify-content: space-between;
+  padding: 6px 30px 0 40px; font-size: 16px; font-weight: 600; z-index: 30; pointer-events: none; }
+.island { position: absolute; left: 50%; top: 11px; width: 124px; height: 36px; border-radius: 20px; background: #000; transform: translateX(-50%); }
+.sb-icons { display: flex; gap: 6px; align-items: center; }
+.sb-icons svg { height: 12px; fill: var(--ink); }
+.home-ind { position: absolute; left: 50%; bottom: 8px; width: 134px; height: 5px; border-radius: 3px; background: var(--ink); transform: translateX(-50%); z-index: 40; pointer-events: none; }
+
+/* Echtes Handy: vollflächig, ohne Rahmen */
+@media (max-width: 520px) {
+  body { background: var(--bg); }
+  .stage { padding: 0; display: block; height: 100%; }
+  .device { width: 100%; height: 100%; border-radius: 0; padding: 0; background: none; box-shadow: none; }
+  .screen { border-radius: 0; }
+  .statusbar, .home-ind, .caption { display: none; }
+  :root { --top: 0px; --bottom: 0px; }
+}
+
+/* Tabs und Seiten */
+.tab { position: absolute; inset: 0; }
+.page { position: absolute; inset: 0; overflow-y: auto; overscroll-behavior: contain; background: var(--bg);
+  padding: calc(var(--top) + 8px) 16px calc(var(--bottom) + 49px + 28px);
+  transition: transform .38s cubic-bezier(.3,.9,.3,1); }
+.page.pushed-under { transform: translateX(-28%); }
+.page.offscreen { transform: translateX(100%); }
+.page.with-nav { padding-top: calc(var(--top) + 44px + 8px); }
+
+.large-title { font-size: 34px; line-height: 1.15; font-weight: 700; letter-spacing: .01em; margin: 6px 4px 6px; }
+.subtitle { color: var(--muted); font-size: 15px; margin: 0 4px 18px; }
+.section-head { font-size: 13px; text-transform: uppercase; letter-spacing: .03em; color: var(--muted); margin: 22px 16px 6px; }
+.section-foot { font-size: 13px; color: var(--muted); margin: 6px 16px 0; }
+
+.group { background: var(--card); border-radius: 12px; overflow: hidden; }
+.row { display: flex; align-items: center; gap: 12px; min-height: 44px; padding: 10px 16px; position: relative; width: 100%; text-align: left; }
+.row + .row::before { content: ""; position: absolute; top: 0; left: 16px; right: 0; border-top: .5px solid var(--sep); }
+.row .grow { flex: 1; min-width: 0; }
+.row .value { color: var(--muted); font-variant-numeric: tabular-nums; }
+.row .sub { font-size: 13px; color: var(--muted); }
+.chev { width: 8px; height: 14px; flex: none; stroke: var(--muted); fill: none; stroke-width: 2; opacity: .6; }
+
+/* Navigationsleiste der Push-Ansicht */
+.navbar { position: absolute; inset: 0 0 auto; z-index: 20; padding-top: var(--top); background: var(--bar);
+  -webkit-backdrop-filter: saturate(180%) blur(20px); backdrop-filter: saturate(180%) blur(20px); border-bottom: .5px solid var(--sep);
+  transition: transform .38s cubic-bezier(.3,.9,.3,1); }
+.navbar.offscreen { transform: translateX(100%); }
+.navbar-inner { height: 44px; display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; padding: 0 8px; }
+.navbar h2 { font-size: 17px; font-weight: 600; margin: 0; }
+.nav-btn { display: inline-flex; align-items: center; gap: 2px; color: var(--accent); padding: 8px; }
+.nav-btn svg { width: 12px; height: 20px; stroke: currentColor; fill: none; stroke-width: 2.6; stroke-linecap: round; stroke-linejoin: round; }
+.nav-btn.right { justify-self: end; }
+.nav-btn.right svg { width: 20px; height: 22px; stroke-width: 1.8; }
+
+/* Tab-Leiste */
+.tabbar { position: absolute; inset: auto 0 0; z-index: 25; display: grid; grid-template-columns: repeat(3, 1fr);
+  padding-bottom: var(--bottom); background: var(--bar); border-top: .5px solid var(--sep);
+  -webkit-backdrop-filter: saturate(180%) blur(20px); backdrop-filter: saturate(180%) blur(20px); }
+.tabbar button { height: 49px; display: grid; justify-items: center; align-content: center; gap: 2px; font-size: 10px; font-weight: 500; color: var(--muted); }
+.tabbar svg { width: 26px; height: 24px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; }
+.tabbar button[aria-selected="true"] { color: var(--accent); }
+
+/* Prüfen */
+.editor { background: var(--card); border-radius: 12px; overflow: hidden; }
+.editor-top { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 10px 14px 0; min-height: 30px; }
+.tag { font-size: 12px; font-weight: 600; padding: 3px 8px; border-radius: 6px; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tag.example { color: var(--ai); background: var(--hl-mid); }
+.tag.file { color: var(--accent); background: var(--fill); }
+.count { font: 13px var(--f-mono); color: var(--muted); font-variant-numeric: tabular-nums; margin-left: auto; white-space: nowrap; }
+textarea { display: block; width: 100%; height: 250px; resize: none; border: 0; background: transparent; color: var(--ink);
+  font: 17px/1.55 var(--f-text); padding: 8px 14px 14px; }
+textarea:focus { outline: none; }
+.tools { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 10px; }
+.tool { position: relative; display: grid; justify-items: center; gap: 4px; padding: 10px 4px; border-radius: 12px; background: var(--card); color: var(--accent); font-size: 13px; font-weight: 500; }
+.tool svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.tool input { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; }
+.notice { font-size: 13px; color: var(--ai); margin: 10px 4px 0; }
+.notice.busy { color: var(--muted); }
+.primary { display: block; width: 100%; margin-top: 16px; height: 50px; border-radius: 14px; background: var(--accent); color: var(--accent-ink); font-weight: 600; }
+.primary:disabled { opacity: .4; cursor: not-allowed; }
+
+/* Ergebnis */
+.verdict { background: var(--card); border-radius: 12px; padding: 18px 16px; display: grid; gap: 14px; }
+.verdict-top { display: flex; gap: 14px; align-items: center; }
+.score { flex: none; width: 74px; height: 74px; border-radius: 50%; display: grid; place-items: center; text-align: center;
+  background: conic-gradient(var(--c) calc(var(--p) * 1%), var(--fill) 0); }
+.score span { width: 60px; height: 60px; border-radius: 50%; background: var(--card); display: grid; place-content: center; line-height: 1; }
+.score b { font-size: 22px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.score small { font-size: 10px; color: var(--muted); margin-top: 2px; }
+.verdict h3 { font-size: 20px; line-height: 1.2; margin: 0 0 4px; }
+.verdict p { font-size: 15px; color: var(--muted); }
+.scale-track { position: relative; height: 10px; display: grid; grid-template-columns: 35fr 30fr 35fr; }
+.scale-track span:nth-child(1) { background: var(--zone-human); border-radius: 5px 0 0 5px; }
+.scale-track span:nth-child(2) { background: var(--zone-mid); }
+.scale-track span:nth-child(3) { background: var(--zone-ai); border-radius: 0 5px 5px 0; }
+.marker { position: absolute; top: -5px; width: 4px; height: 20px; border-radius: 2px; background: var(--ink); transform: translateX(-50%);
+  box-shadow: 0 0 0 3px var(--card); transition: left .8s cubic-bezier(.2,.8,.2,1); }
+.scale-labels { display: grid; grid-template-columns: 35fr 30fr 35fr; font-size: 11px; color: var(--muted); margin-top: 6px; }
+.scale-labels span:nth-child(2) { text-align: center; } .scale-labels span:nth-child(3) { text-align: right; }
+
+.marked-card { background: var(--card); border-radius: 12px; padding: 14px 16px; display: grid; gap: 12px; }
+.legend { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 12px; color: var(--muted); }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.sw { width: 16px; height: 10px; border-radius: 3px; border: 1px solid var(--sep); }
+.sw.ai { background: var(--hl-ai); } .sw.mid { background: var(--hl-mid); }
+.marked { font: 17px/1.7 var(--f-text); display: grid; gap: 12px; }
+.marked p { overflow-wrap: anywhere; }
+.s { cursor: pointer; border-radius: 3px; -webkit-box-decoration-break: clone; box-decoration-break: clone; }
+.s.ai { background: linear-gradient(transparent 10%, var(--hl-ai) 10%, var(--hl-ai) 92%, transparent 92%); }
+.s.mid { background: linear-gradient(transparent 10%, var(--hl-mid) 10%, var(--hl-mid) 92%, transparent 92%); }
+.s.sel { box-shadow: inset 0 -2px 0 var(--accent); }
+
+.signal { display: grid; gap: 6px; padding: 12px 16px; position: relative; }
+.signal + .signal::before { content: ""; position: absolute; top: 0; left: 16px; right: 0; border-top: .5px solid var(--sep); }
+.signal-top { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; }
+.signal-top strong { font-weight: 600; font-size: 16px; }
+.signal p { font-size: 13px; color: var(--muted); }
+.bar { height: 5px; border-radius: 3px; background: var(--fill); overflow: hidden; }
+.bar i { display: block; height: 100%; border-radius: 3px; transition: width .8s cubic-bezier(.2,.8,.2,1); }
+.lean { font-size: 12px; font-weight: 600; white-space: nowrap; }
+.lean.ai, .t-ai { color: var(--ai); } .lean.human, .t-human { color: var(--human); } .lean.mid, .t-mid { color: var(--mid); }
+
+.pill { display: inline-flex; font-size: 12px; font-weight: 600; padding: 3px 9px; border-radius: 999px; width: fit-content; }
+.pill.ai { color: var(--ai); background: var(--hl-mid); }
+.pill.mid { color: var(--mid); background: var(--zone-mid); }
+.pill.human { color: var(--human); background: var(--zone-human); }
+
+/* Verlauf */
+.badge { flex: none; min-width: 40px; text-align: center; font: 600 13px var(--f-mono); padding: 4px 8px; border-radius: 8px; font-variant-numeric: tabular-nums; }
+.badge.ai { color: var(--ai); background: var(--hl-mid); } .badge.mid { color: var(--mid); background: var(--zone-mid); } .badge.human { color: var(--human); background: var(--zone-human); }
+.row .title { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.empty { text-align: center; color: var(--muted); padding: 40px 16px; font-size: 15px; }
+.danger { color: #D93025; justify-content: center; }
+
+/* Info */
+.info-text { font-size: 15px; color: var(--ink); }
+.info-text + .info-text { margin-top: 8px; }
+.info-card { background: var(--card); border-radius: 12px; padding: 14px 16px; }
+
+/* Bottom Sheet */
+.backdrop { position: absolute; inset: 0; z-index: 50; background: rgba(0,0,0,.32); opacity: 0; transition: opacity .3s; }
+.backdrop.open { opacity: 1; }
+.sheet { position: absolute; inset: auto 0 0; z-index: 51; background: var(--card); border-radius: 14px 14px 0 0;
+  padding: 8px 20px calc(var(--bottom) + 20px); max-height: 80%; overflow-y: auto; transform: translateY(105%); transition: transform .38s cubic-bezier(.3,.9,.3,1);
+  display: grid; gap: 12px; }
+.sheet.open { transform: translateY(0); }
+.grabber { width: 36px; height: 5px; border-radius: 3px; background: var(--sep); justify-self: center; margin-bottom: 4px; }
+.sheet h3 { font-size: 20px; margin: 0; }
+.sheet .quote { font: italic 16px/1.5 var(--f-text); color: var(--muted); }
+.reasons { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; font-size: 15px; }
+.reasons li { display: grid; grid-template-columns: 22px 1fr; gap: 6px; }
+.reasons .sign { font: 600 15px var(--f-mono); text-align: center; }
+.reasons .plus { color: var(--ai); } .reasons .minus { color: var(--human); } .reasons .zero { color: var(--muted); }
+.key { font-size: 12px; color: var(--muted); }
+.secondary { height: 48px; border-radius: 14px; background: var(--fill); color: var(--accent); font-weight: 600; }
+
+.steps { list-style: none; margin: 0; padding: 0; display: grid; gap: 14px; }
+.steps li { display: flex; align-items: center; gap: 12px; color: var(--muted); font-size: 16px; }
+.steps .dot { width: 22px; height: 22px; border-radius: 50%; border: 2px solid var(--sep); flex: none; display: grid; place-items: center; }
+.steps li.active, .steps li.done { color: var(--ink); }
+.steps li.active .dot { border-color: var(--accent); border-top-color: transparent; animation: spin .8s linear infinite; }
+.steps li.done .dot { border-color: var(--human); background: var(--human); }
+.steps li.done .dot::after { content: ""; width: 9px; height: 5px; border: 2px solid var(--card); border-top: 0; border-right: 0; transform: rotate(-45deg) translate(1px, -1px); }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.toast { position: absolute; left: 50%; bottom: calc(var(--bottom) + 49px + 16px); transform: translateX(-50%); z-index: 60;
+  background: var(--ink); color: var(--bg); padding: 10px 16px; border-radius: 12px; font-size: 14px; white-space: nowrap; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { transition: none !important; animation-duration: .01ms !important; }
+}
+</style>
+
+<div class="stage">
+  <div class="device">
+    <div class="screen" id="screen">
+      <div class="statusbar" aria-hidden="true">
+        <span>9:41</span>
+        <span class="island"></span>
+        <span class="sb-icons">
+          <svg viewBox="0 0 18 12"><rect x="0" y="8" width="3" height="4" rx="1"/><rect x="5" y="5.5" width="3" height="6.5" rx="1"/><rect x="10" y="3" width="3" height="9" rx="1"/><rect x="15" y="0" width="3" height="12" rx="1"/></svg>
+          <svg viewBox="0 0 27 12"><rect x=".5" y=".5" width="22" height="11" rx="3" fill="none" stroke="var(--ink)" opacity=".4"/><rect x="2" y="2" width="17" height="8" rx="1.8"/><rect x="24" y="4" width="2" height="4" rx="1" opacity=".4"/></svg>
+        </span>
+      </div>
+
+      <!-- Tab: Prüfen -->
+      <section class="tab" id="tab-check">
+        <div class="page" id="page-check">
+          <h1 class="large-title">Prüfen</h1>
+          <p class="subtitle">Füge einen Text ein. Textlupe markiert Stellen, die typisch für KI wirken.</p>
+
+          <div class="editor">
+            <div class="editor-top">
+              <span class="tag example" id="example-tag">Beispieltext</span>
+              <span class="tag file" id="file-tag" hidden></span>
+              <span class="count" id="count">0 Wörter</span>
+            </div>
+            <label for="input" hidden>Text</label>
+            <textarea id="input" spellcheck="false" placeholder="Text hier einfügen …"></textarea>
+          </div>
+
+          <div class="tools">
+            <label class="tool" for="file">
+              <svg viewBox="0 0 24 24"><path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4"/><path d="M12 11v6M9 14l3-3 3 3"/></svg>
+              Datei
+              <input type="file" id="file" accept=".txt,.docx,.pdf,text/plain,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document">
+            </label>
+            <button class="tool" id="btn-example" type="button">
+              <svg viewBox="0 0 24 24"><path d="M5 4h14v16H5z"/><path d="M8 9h8M8 13h8M8 17h5"/></svg>
+              Beispiel
+            </button>
+            <button class="tool" id="btn-clear" type="button">
+              <svg viewBox="0 0 24 24"><path d="M5 7h14M10 7V4h4v3M7 7l1 13h8l1-13"/></svg>
+              Leeren
+            </button>
+          </div>
+          <p class="notice" id="notice" hidden></p>
+
+          <button class="primary" id="btn-run" type="button">Text prüfen</button>
+          <p class="section-foot" style="margin-top:10px;text-align:center">Word, PDF oder Text · aussagekräftig ab etwa 150 Wörtern</p>
+
+          <p class="section-head">Gut zu wissen</p>
+          <div class="group">
+            <div class="row"><span class="grow">Prüfung</span><span class="value">nur auf dem Gerät</span></div>
+            <div class="row"><span class="grow">Ergebnis</span><span class="value">Einschätzung, kein Beweis</span></div>
+          </div>
+        </div>
+
+        <div class="navbar offscreen" id="nav-result">
+          <div class="navbar-inner">
+            <button class="nav-btn" id="btn-back" type="button" aria-label="Zurück zu Prüfen">
+              <svg viewBox="0 0 12 20"><path d="M10 2L2 10l8 8"/></svg>Prüfen
+            </button>
+            <h2>Ergebnis</h2>
+            <button class="nav-btn right" id="btn-share" type="button" aria-label="Ergebnis teilen">
+              <svg viewBox="0 0 20 22"><path d="M10 13V2M6 6l4-4 4 4"/><path d="M6 9H3v12h14V9h-3"/></svg>
+            </button>
+          </div>
+        </div>
+        <div class="page with-nav offscreen" id="page-result">
+          <div class="verdict">
+            <div class="verdict-top">
+              <div class="score" id="score" style="--p:0;--c:var(--mid)"><span><b id="score-num">0</b><small>von 100</small></span></div>
+              <div><h3 id="verdict-title"></h3><p id="verdict-text"></p></div>
+            </div>
+            <div>
+              <div class="scale-track"><span></span><span></span><span></span><i class="marker" id="marker" style="left:0%"></i></div>
+              <div class="scale-labels"><span>eher menschlich</span><span>gemischt</span><span>eher KI</span></div>
+            </div>
+          </div>
+          <div class="group" style="margin-top:12px">
+            <div class="row"><span class="grow">Aussagekraft</span><span class="value" id="fact-conf"></span></div>
+            <div class="row"><span class="grow">Umfang</span><span class="value" id="fact-size"></span></div>
+          </div>
+
+          <p class="section-head">Dein Text</p>
+          <div class="marked-card">
+            <div class="legend">
+              <span><i class="sw ai"></i>KI-typisch</span><span><i class="sw mid"></i>teilweise</span><span><i class="sw"></i>unauffällig</span>
+            </div>
+            <div class="marked" id="marked"></div>
+          </div>
+          <p class="section-foot">Tippe auf einen Satz, um die Gründe zu sehen.</p>
+
+          <p class="section-head">Worauf wir geachtet haben</p>
+          <div class="group" id="signals"></div>
+          <p class="section-foot">In der fertigen App kommen zwei Prüfungen dazu: ein Sprachmodell misst, wie vorhersehbar die Wörter sind, und ein KI-Gutachten begründet die Einschätzung in eigenen Worten.</p>
+
+          <p class="section-head">So liest du das Ergebnis</p>
+          <div class="info-card">
+            <p class="info-text">Kein Programm erkennt KI-Texte sicher. Nutze das Ergebnis nicht, um jemandem Betrug vorzuwerfen.</p>
+            <p class="info-text">Sachliche Texte, Bewerbungen und Texte von Nicht-Muttersprachlern werden öfter fälschlich markiert.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- Tab: Verlauf -->
+      <section class="tab" id="tab-checks" hidden>
+        <div class="page">
+          <h1 class="large-title">Verlauf</h1>
+          <p class="subtitle">Deine letzten Prüfungen. Sie bleiben nur auf diesem Gerät.</p>
+          <div class="group" id="checks"></div>
+          <div class="group" style="margin-top:22px"><button class="row danger" id="btn-clear-checks" type="button">Verlauf löschen</button></div>
+        </div>
+      </section>
+
+      <!-- Tab: Info -->
+      <section class="tab" id="tab-info" hidden>
+        <div class="page">
+          <h1 class="large-title">Info</h1>
+          <p class="section-head">So prüft Textlupe</p>
+          <div class="info-card">
+            <p class="info-text">Textlupe sucht nach Merkmalen, die in KI-Texten häufig vorkommen: gleichmäßige Satzlängen, typische Floskeln wie „darüber hinaus“, wenig Persönliches.</p>
+            <p class="info-text">Jeder Satz bekommt eine Markierung, der ganze Text eine Einschätzung von 0 bis 100.</p>
+          </div>
+          <p class="section-head">Grenzen</p>
+          <div class="group">
+            <div class="row"><span class="grow">Hinweis, kein Beweis<br><span class="sub">Auch die besten Detektoren irren sich regelmäßig.</span></span></div>
+            <div class="row"><span class="grow">Überarbeitete KI-Texte<br><span class="sub">Wer umschreibt, verwischt die Spuren.</span></span></div>
+            <div class="row"><span class="grow">Kurze Texte<br><span class="sub">Unter 150 Wörtern ist die Aussage schwach.</span></span></div>
+          </div>
+          <p class="section-head">Datenschutz</p>
+          <div class="group">
+            <div class="row"><span class="grow">Speicherort</span><span class="value">nur dieses iPhone</span></div>
+            <div class="row"><span class="grow">Konto nötig</span><span class="value">nein</span></div>
+          </div>
+          <p class="section-head">App</p>
+          <div class="group">
+            <div class="row"><span class="grow">Version</span><span class="value">Entwurf 0.3</span></div>
+          </div>
+        </div>
+      </section>
+
+      <nav class="tabbar" role="tablist">
+        <button type="button" role="tab" aria-selected="true" data-tab="check">
+          <svg viewBox="0 0 26 24"><circle cx="11" cy="10" r="7"/><path d="M16 15l6 6"/></svg>Prüfen
+        </button>
+        <button type="button" role="tab" aria-selected="false" data-tab="checks">
+          <svg viewBox="0 0 26 24"><circle cx="13" cy="12" r="9"/><path d="M13 7v5l3 2"/></svg>Verlauf
+        </button>
+        <button type="button" role="tab" aria-selected="false" data-tab="info">
+          <svg viewBox="0 0 26 24"><circle cx="13" cy="12" r="9"/><path d="M13 11v6M13 7.5v.01"/></svg>Info
+        </button>
+      </nav>
+
+      <div class="backdrop" id="backdrop" hidden></div>
+      <div class="sheet" id="sheet" role="dialog" aria-modal="true" hidden></div>
+      <div class="toast" id="toast" hidden></div>
+      <div class="home-ind" aria-hidden="true"></div>
+    </div>
+  </div>
+  <p class="caption"><strong>Entwurf der iPhone-App.</strong> Auf dem Handy geöffnet, füllt die App den ganzen Bildschirm.</p>
+</div>
+
+<script>
+const SAMPLE = `Letzten Samstag waren wir endlich mal wieder am Edersee. Ehrlich gesagt hatte ich keine große Lust, weil es morgens noch genieselt hat und mein Knie seit der Wanderung im Mai rumzickt. Aber Jonas hat nicht lockergelassen. Wir sind dann bis zur Sperrmauer gelaufen, haben uns an der Bude eine Bratwurst geholt und uns über die Wespen geärgert. Auf dem Rückweg hat's dann doch noch geschüttet.
+
+Wandern bietet zahlreiche Vorteile für Körper und Geist. Es ist wichtig zu beachten, dass regelmäßige Bewegung in der Natur nachweislich Stress reduziert und das allgemeine Wohlbefinden steigert. Darüber hinaus fördert Wandern die Ausdauer und stärkt das Herz-Kreislauf-System. Zusammenfassend lässt sich sagen, dass Wandern eine ganzheitliche Aktivität ist, die sowohl die körperliche als auch die mentale Gesundheit nachhaltig unterstützt.`;
+
+// Vereinfachte Heuristik für den Entwurf. Die echte App ergänzt Sprachmodell-Messung und KI-Gutachten.
+const PHRASES = [
+  "es ist wichtig zu beachten", "es ist wichtig", "darüber hinaus", "zusammenfassend", "lässt sich sagen",
+  "abschließend", "spielt eine entscheidende rolle", "spielt eine wichtige rolle", "eine zentrale rolle",
+  "von großer bedeutung", "in der heutigen zeit", "in der heutigen", "nicht nur", "sowohl", "ganzheitlich",
+  "nachhaltig", "bietet zahlreiche", "zahlreiche", "vielfältig", "nachweislich", "fördert", "steigert",
+  "maßgeblich", "letztendlich", "im folgenden", "tauchen sie ein", "entdecken sie", "ein wichtiger aspekt",
+  "wesentlich", "effektiv", "optimal", "zudem", "eine vielzahl"
+].sort((a, b) => b.length - a.length);
+const PERSONAL = /\b(ich|wir|mein\w*|mir|mich|uns|du|dein\w*)\b/gi;
+const COLLOQ = /\b(ehrlich gesagt|halt|mal|echt|irgendwie|naja|eigentlich|bisschen|rum\w+|krass|doch noch)\b|['’]s\b/gi;
+const WORD = /[A-Za-zÄÖÜäöüß0-9'’-]+/g;
+
+const $ = id => document.getElementById(id);
+const words = t => t.match(WORD) || [];
+const clamp = (v, a = 0, b = 1) => Math.min(b, Math.max(a, v));
+
+function findPhrases(s) {
+  let work = s.toLowerCase(); const hits = [];
+  for (const p of PHRASES) {
+    let i;
+    while ((i = work.indexOf(p)) >= 0) { hits.push(p); work = work.slice(0, i) + " ".repeat(p.length) + work.slice(i + p.length); }
+  }
+  return hits;
+}
+
+function scoreSentence(text) {
+  const w = words(text), wc = w.length, reasons = [];
+  let s = .35;
+  const hits = findPhrases(text);
+  if (hits.length) {
+    s += Math.min(.5, hits.length * .22);
+    hits.forEach(h => reasons.push([1, `Typische KI-Formulierung: „${h}“`]));
+  }
+  const pers = [...new Set((text.match(PERSONAL) || []).map(x => x.toLowerCase()))];
+  if (pers.length) { s -= Math.min(.3, pers.length * .12); reasons.push([-1, `Persönliche Perspektive („${pers.join("“, „")}“)`]); }
+  const coll = [...new Set((text.match(COLLOQ) || []).map(x => x.toLowerCase()))];
+  if (coll.length) { s -= Math.min(.25, coll.length * .1); reasons.push([-1, `Umgangssprache („${coll.join("“, „")}“)`]); }
+  if (/\d/.test(text)) { s -= .05; reasons.push([-1, "Konkrete Zahl oder Angabe"]); }
+  if (wc >= 16 && wc <= 32) { s += .1; reasons.push([1, `Mittellanger, glatt gebauter Satz (${wc} Wörter)`]); }
+  else if (wc < 9) { s -= .1; reasons.push([-1, `Kurzer Satz (${wc} Wörter)`]); }
+  const long = w.filter(x => x.length > 12).length;
+  if (wc && long / wc > .15) { s += .08; reasons.push([1, "Viele lange, abstrakte Wörter"]); }
+  if (!reasons.length) reasons.push([0, "Keine auffälligen Merkmale"]);
+  return { text, wc, score: clamp(s, .03, .97), reasons, hits };
+}
+
+const level = v => v >= .6 ? "ai" : v >= .4 ? "mid" : "human";
+const LEVEL_TEXT = { ai: "wirkt KI-typisch", mid: "teilweise auffällig", human: "unauffällig" };
+
+function analyze(text) {
+  const paras = text.trim().split(/\n\s*\n/).map(p => p.trim()).filter(Boolean)
+    .map(p => (p.replace(/\s+/g, " ").match(/[^.!?…]+(?:[.!?…]+["“”»«')]*|$)/g) || [p]).map(s => s.trim()).filter(Boolean).map(scoreSentence));
+  const sents = paras.flat();
+  const total = sents.reduce((a, s) => a + s.wc, 0) || 1;
+  const meanScore = sents.reduce((a, s) => a + s.score * s.wc, 0) / total;
+
+  const lens = sents.map(s => s.wc);
+  const mean = lens.reduce((a, b) => a + b, 0) / (lens.length || 1);
+  const sd = Math.sqrt(lens.reduce((a, b) => a + (b - mean) ** 2, 0) / (lens.length || 1));
+  const cv = mean ? sd / mean : 0;
+  const burstAI = clamp((.6 - cv) / .4);
+
+  const allHits = sents.flatMap(s => s.hits);
+  const phraseDensity = allHits.length / total * 100;
+  const phraseAI = clamp(phraseDensity / 4);
+
+  const w = words(text).map(x => x.toLowerCase());
+  const ttr = w.length ? new Set(w).size / w.length : 0;
+  const ttrAI = clamp((.75 - ttr) / .3);
+
+  const persCount = (text.match(PERSONAL) || []).length + (text.match(COLLOQ) || []).length;
+  const persAI = clamp(1 - persCount / total * 100 / 5);
+
+  const overall = clamp(.6 * meanScore + .25 * burstAI + .15 * phraseAI);
+  return { paras, sents, total, overall, cv, burstAI, allHits, phraseAI, ttr, ttrAI, persCount, persAI };
+}
+
+
+/* Dateien lesen: Bibliotheken werden erst geladen, wenn jemand Word oder PDF hochlädt. */
+const LIBS = {
+  mammoth: "https://cdn.jsdelivr.net/npm/mammoth@1.8.0/mammoth.browser.min.js",
+  pdf: "https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js",
+  // Der PDF-Worker läuft im Hauptthread, weil Worker von fremden Adressen blockiert sind.
+  pdfWorker: "https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js"
+};
+const loaded = {};
+function loadScript(src) {
+  return loaded[src] ??= new Promise((resolve, reject) => {
+    const s = document.createElement("script");
+    s.src = src; s.onload = resolve;
+    s.onerror = () => { delete loaded[src]; reject(new Error("load")); };
+    document.head.append(s);
+  });
+}
+
+async function readDocx(f) {
+  await loadScript(LIBS.mammoth);
+  const { value } = await mammoth.extractRawText({ arrayBuffer: await f.arrayBuffer() });
+  return value;
+}
+
+async function readPdf(f) {
+  await loadScript(LIBS.pdfWorker);
+  await loadScript(LIBS.pdf);
+  const doc = await pdfjsLib.getDocument({ data: new Uint8Array(await f.arrayBuffer()) }).promise;
+  const pages = [];
+  for (let i = 1; i <= doc.numPages; i++) {
+    const { items } = await (await doc.getPage(i)).getTextContent();
+    // Zeilen mit ihrer Höhe auf der Seite sammeln.
+    const lines = []; let cur = null;
+    for (const it of items) {
+      if (!cur) cur = { y: it.transform[5], text: "" };
+      cur.text += it.str;
+      if (it.hasEOL) { lines.push(cur); cur = null; }
+    }
+    if (cur) lines.push(cur);
+    // Ein deutlich größerer Abstand als der übliche Zeilenabstand gilt als neuer Absatz.
+    const gaps = lines.slice(1).map((l, j) => Math.abs(lines[j].y - l.y)).filter(g => g > 0).sort((a, b) => a - b);
+    const lineGap = gaps[Math.floor(gaps.length / 2)] || 0;
+    let page = "";
+    lines.forEach((l, j) => {
+      const gap = j ? Math.abs(lines[j - 1].y - l.y) : 0;
+      page += (j ? (lineGap && gap > lineGap * 1.4 ? "\n\n" : "\n") : "") + l.text;
+    });
+    pages.push(page);
+  }
+  // Zeilenumbrüche des Layouts entfernen, Trennstriche zusammenziehen, Absätze und Seitenwechsel behalten.
+  return pages.join("\n\n")
+    .replace(/(\p{Ll})-\n(\p{Ll})/gu, "$1$2")
+    .split(/\n\s*\n/).map(p => p.replace(/\s*\n\s*/g, " ").trim()).filter(Boolean).join("\n\n");
+}
+
+
+/* Eingabe */
+const input = $("input");
+function updateCount() {
+  const n = words(input.value).length;
+  $("count").textContent = `${n.toLocaleString("de-DE")} ${n === 1 ? "Wort" : "Wörter"}`;
+  $("btn-run").disabled = n < 20;
+  $("example-tag").hidden = input.value !== SAMPLE;
+}
+function showNotice(msg, busy = false) { const n = $("notice"); n.textContent = msg; n.hidden = !msg; n.classList.toggle("busy", busy); }
+let fileName = "";
+function setFileTag(name) { fileName = name; const t = $("file-tag"); t.textContent = name; t.title = name; t.hidden = !name; }
+input.addEventListener("input", () => { setFileTag(""); updateCount(); });
+$("btn-example").onclick = () => { input.value = SAMPLE; setFileTag(""); showNotice(""); updateCount(); };
+$("btn-clear").onclick = () => { input.value = ""; setFileTag(""); showNotice(""); updateCount(); input.focus(); };
+
+async function readFile(f) {
+  if (!f) return;
+  const name = f.name.toLowerCase();
+  if (f.size > 10 * 1024 * 1024) { showNotice("Die Datei ist größer als 10 MB. Bitte eine kleinere Datei wählen."); return; }
+  if (name.endsWith(".doc")) { showNotice("Alte Word-Dateien (.doc) gehen nicht. Speichere sie als .docx oder PDF."); return; }
+  const kind = name.endsWith(".docx") ? "docx" : name.endsWith(".pdf") || f.type === "application/pdf" ? "pdf"
+    : name.endsWith(".txt") || f.type === "text/plain" ? "txt" : null;
+  if (!kind) { showNotice("Dieses Format geht nicht. Erlaubt sind .txt, .docx und .pdf."); return; }
+  showNotice("Datei wird gelesen …", true);
+  $("btn-run").disabled = true;
+  try {
+    const text = kind === "txt" ? await f.text() : kind === "docx" ? await readDocx(f) : await readPdf(f);
+    if (words(text).length < 20) {
+      showNotice(kind === "pdf" ? "In dieser PDF steckt kaum lesbarer Text. Gescannte Seiten kann Textlupe noch nicht lesen." : "Die Datei enthält fast keinen Text.");
+      updateCount(); return;
+    }
+    input.value = text.trim(); setFileTag(f.name); updateCount(); showNotice("");
+  } catch (e) {
+    showNotice(e.message === "load" ? "Das Lesewerkzeug konnte nicht geladen werden. Prüfe deine Internetverbindung."
+      : e.name === "PasswordException" ? "Die PDF ist mit einem Passwort geschützt."
+      : "Die Datei ließ sich nicht lesen. Ist sie vielleicht beschädigt?");
+    updateCount();
+  }
+}
+$("file").addEventListener("change", e => { readFile(e.target.files[0]); e.target.value = ""; });
+
+/* Tabs und Navigation */
+function showTab(name) {
+  ["check", "checks", "info"].forEach(t => $("tab-" + t).hidden = t !== name);
+  document.querySelectorAll(".tabbar button").forEach(b => b.setAttribute("aria-selected", b.dataset.tab === name));
+  if (name === "checks") renderHistory();
+}
+document.querySelectorAll(".tabbar button").forEach(b => b.onclick = () => {
+  if (b.dataset.tab === "check" && !$("tab-check").hidden) popResult();
+  showTab(b.dataset.tab);
+});
+function pushResult() {
+  $("page-result").scrollTop = 0;
+  $("page-check").classList.add("pushed-under");
+  $("page-result").classList.remove("offscreen");
+  $("nav-result").classList.remove("offscreen");
+}
+function popResult() {
+  $("page-check").classList.remove("pushed-under");
+  $("page-result").classList.add("offscreen");
+  $("nav-result").classList.add("offscreen");
+}
+$("btn-back").onclick = popResult;
+
+/* Bottom Sheet */
+let sheetClosable = true;
+function openSheet(nodes, closable = true) {
+  sheetClosable = closable;
+  const s = $("sheet"), b = $("backdrop");
+  const g = document.createElement("div"); g.className = "grabber";
+  s.replaceChildren(g, ...nodes);
+  s.hidden = b.hidden = false;
+  requestAnimationFrame(() => requestAnimationFrame(() => { s.classList.add("open"); b.classList.add("open"); }));
+}
+function closeSheet() {
+  const s = $("sheet"), b = $("backdrop");
+  s.classList.remove("open"); b.classList.remove("open");
+  setTimeout(() => { s.hidden = b.hidden = true; }, reduced ? 0 : 380);
+}
+$("backdrop").onclick = () => sheetClosable && closeSheet();
+document.addEventListener("keydown", e => { if (e.key === "Escape" && sheetClosable && !$("sheet").hidden) closeSheet(); });
+const el = (tag, cls, text) => { const n = document.createElement(tag); if (cls) n.className = cls; if (text != null) n.textContent = text; return n; };
+
+/* Prüfen */
+const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+let lastResult = null;
+$("btn-run").onclick = () => {
+  const text = input.value;
+  const res = analyze(text);
+  const steps = el("ul", "steps");
+  ["Satzbau und Stil vermessen", "Typische KI-Formulierungen suchen", "Hinweise zusammenführen"].forEach(t => {
+    const li = el("li"); li.append(el("span", "dot"), t); steps.append(li);
+  });
+  openSheet([el("h3", null, "Text wird geprüft"), steps], false);
+  const items = [...steps.children], step = reduced ? 120 : 600;
+  items.forEach((li, i) => setTimeout(() => { li.className = "active"; if (i) items[i - 1].className = "done"; }, 300 + i * step));
+  setTimeout(() => items.at(-1).className = "done", 300 + items.length * step);
+  setTimeout(() => {
+    closeSheet();
+    renderResult(res);
+    addHistory(text, res, fileName);
+    pushResult();
+  }, 300 + items.length * step + 300);
+};
+
+const VERDICTS = {
+  human: ["Wirkt überwiegend menschlich", "Nur wenige KI-typische Merkmale. Ganz ausschließen lässt sich KI-Hilfe damit nicht."],
+  mid: ["Gemischtes Bild", "Einige Stellen wirken typisch für KI, andere klar persönlich."],
+  ai: ["Viele KI-typische Merkmale", "Der Text ähnelt stark KI-Texten. Ein Beweis ist das nicht."]
+};
+const bandOf = v => v >= .65 ? "ai" : v >= .35 ? "mid" : "human";
+
+function renderResult(r) {
+  lastResult = r;
+  const idx = Math.round(r.overall * 100), lv = bandOf(r.overall);
+  $("verdict-title").textContent = VERDICTS[lv][0];
+  $("verdict-text").textContent = VERDICTS[lv][1];
+  $("score-num").textContent = idx;
+  $("score").style.setProperty("--c", `var(--${lv})`);
+  $("score").style.setProperty("--p", idx);
+  $("fact-conf").textContent = r.total < 80 ? "gering" : r.total < 200 ? "mäßig" : "mittel";
+  $("fact-size").textContent = `${r.total.toLocaleString("de-DE")} Wörter · ${r.sents.length} Sätze`;
+  $("marker").style.left = "0%";
+  setTimeout(() => $("marker").style.left = idx + "%", 400);
+
+  const marked = $("marked"); marked.replaceChildren();
+  r.paras.forEach(p => {
+    const para = el("p");
+    p.forEach((s, i) => {
+      const sp = el("span", "s " + level(s.score), s.text);
+      sp.tabIndex = 0; sp.setAttribute("role", "button");
+      sp.setAttribute("aria-label", `Satz ${LEVEL_TEXT[level(s.score)]}: ${s.text}`);
+      sp.onclick = () => showSentence(sp, s);
+      sp.onkeydown = e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); showSentence(sp, s); } };
+      para.append(sp, i < p.length - 1 ? " " : "");
+    });
+    marked.append(para);
+  });
+
+  const leanOf = v => v >= .6 ? ["ai", "spricht für KI"] : v >= .4 ? ["mid", "neutral"] : ["human", "spricht für Mensch"];
+  const sig = [
+    ["Satzlängen", r.burstAI, `Menschen schreiben mal kurz, mal lang. Hier schwanken die Sätze ${r.cv > .5 ? "deutlich" : r.cv > .3 ? "etwas" : "kaum"}.`],
+    ["KI-Formulierungen", r.phraseAI, r.allHits.length ? `${r.allHits.length} gefunden, z. B. „${[...new Set(r.allHits)].slice(0, 3).join("“, „")}“.` : "Keine der typischen Floskeln gefunden."],
+    ["Persönliches", r.persAI, r.persCount ? `${r.persCount} Stellen mit „ich“, „wir“ oder Alltagssprache.` : "Kaum persönliche oder umgangssprachliche Stellen."],
+    ["Wortvielfalt", r.ttrAI, `${Math.round(r.ttr * 100)} % der Wörter kommen nur einmal vor.`]
+  ];
+  const list = $("signals"); list.replaceChildren();
+  sig.forEach(([name, v, txt]) => {
+    const [cls, lean] = leanOf(v);
+    const box = el("div", "signal"), top = el("div", "signal-top"), bar = el("div", "bar"), fill = el("i");
+    top.append(el("strong", null, name), el("span", "lean " + cls, lean));
+    fill.style.cssText = `width:0;background:var(--${cls})`;
+    bar.append(fill);
+    box.append(top, bar, el("p", null, txt));
+    list.append(box);
+    setTimeout(() => fill.style.width = Math.max(4, v * 100) + "%", 450);
+  });
+}
+
+function showSentence(span, s) {
+  document.querySelectorAll(".s.sel").forEach(x => x.classList.remove("sel"));
+  span.classList.add("sel");
+  const lv = level(s.score);
+  const ul = el("ul", "reasons");
+  s.reasons.forEach(([sign, txt]) => {
+    const li = el("li");
+    li.append(el("span", "sign " + (sign > 0 ? "plus" : sign < 0 ? "minus" : "zero"), sign > 0 ? "+" : sign < 0 ? "−" : "·"), el("span", null, txt));
+    ul.append(li);
+  });
+  const done = el("button", "secondary", "Fertig"); done.type = "button";
+  done.onclick = () => { closeSheet(); span.classList.remove("sel"); };
+  openSheet([
+    el("h3", null, "Satz im Detail"),
+    el("p", "quote", `„${s.text}“`),
+    el("span", "pill " + lv, LEVEL_TEXT[lv][0].toUpperCase() + LEVEL_TEXT[lv].slice(1)),
+    ul,
+    el("p", "key", "+ spricht für KI    − spricht für Mensch"),
+    done
+  ]);
+  done.focus();
+}
+
+let toastTimer;
+function toast(msg) { const t = $("toast"); t.textContent = msg; t.hidden = false; clearTimeout(toastTimer); toastTimer = setTimeout(() => t.hidden = true, 2200); }
+// In der fertigen App öffnet sich hier das iOS-Teilen-Menü. Im Entwurf wird das Ergebnis kopiert.
+$("btn-share").onclick = () => {
+  if (!lastResult) return;
+  const txt = `Textlupe: ${$("verdict-title").textContent} (KI-Merkmale ${Math.round(lastResult.overall * 100)} von 100, Aussagekraft ${$("fact-conf").textContent}). Das ist eine Einschätzung, kein Beweis.`;
+  navigator.clipboard.writeText(txt).then(() => toast("Ergebnis kopiert"), () => toast("Kopieren nicht möglich"));
+};
+
+/* Verlauf: bleibt nur in diesem Browser, die Beispiele sind markiert. */
+const HKEY = "textlupe-verlauf";
+let checks = [];
+try { checks = JSON.parse(localStorage.getItem(HKEY)) || []; } catch (e) { checks = []; }
+if (!checks.length) {
+  const ex2 = "Künstliche Intelligenz spielt eine entscheidende Rolle in der heutigen Arbeitswelt. Darüber hinaus bietet sie zahlreiche Möglichkeiten, Prozesse effektiv und nachhaltig zu optimieren. Zusammenfassend lässt sich sagen, dass Unternehmen maßgeblich von dieser Entwicklung profitieren. Es ist wichtig zu beachten, dass der Einsatz sowohl Chancen als auch Risiken birgt.";
+  const ex3 = "Ich hab gestern endlich die Steuererklärung gemacht. Hat ewig gedauert, weil ich die Belege vom Zahnarzt nicht mehr gefunden hab. Am Ende lagen sie im Handschuhfach, frag nicht. Jetzt hoffe ich halt, dass was zurückkommt, sonst war der ganze Sonntag umsonst. Nächstes Jahr mach ich das echt früher, versprochen.";
+  checks = [
+    { text: ex2, date: Date.now() - 864e5, example: true },
+    { text: ex3, date: Date.now() - 3 * 864e5, example: true }
+  ].map(h => ({ ...h, idx: Math.round(analyze(h.text).overall * 100) }));
+}
+function saveHistory() { try { localStorage.setItem(HKEY, JSON.stringify(checks.filter(h => !h.example))); } catch (e) {} }
+function addHistory(text, r, file) {
+  checks.unshift({ text, file, date: Date.now(), idx: Math.round(r.overall * 100) });
+  checks = checks.slice(0, 30);
+  saveHistory();
+}
+function renderHistory() {
+  const box = $("checks"); box.replaceChildren();
+  if (!checks.length) { box.append(el("p", "empty", "Noch keine Prüfungen. Deine Ergebnisse erscheinen hier.")); return; }
+  checks.forEach(h => {
+    const row = el("button", "row"); row.type = "button";
+    const g = el("span", "grow");
+    const title = h.file || h.text.split(/\s+/).slice(0, 7).join(" ") + " …";
+    const when = new Date(h.date).toLocaleDateString("de-DE", { day: "numeric", month: "short" });
+    g.append(el("span", "title", title), el("span", "sub", `${when} · ${words(h.text).length} Wörter${h.example ? " · Beispiel" : ""}`));
+    const badge = el("span", "badge " + bandOf(h.idx / 100), String(h.idx));
+    const chev = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    chev.setAttribute("viewBox", "0 0 8 14"); chev.setAttribute("class", "chev");
+    chev.innerHTML = '<path d="M1 1l6 6-6 6"/>';
+    row.append(g, badge, chev);
+    row.onclick = () => {
+      input.value = h.text; setFileTag(h.file || ""); updateCount();
+      renderResult(analyze(h.text));
+      showTab("check"); pushResult();
+    };
+    box.append(row);
+  });
+}
+$("btn-clear-checks").onclick = () => { checks = []; saveHistory(); renderHistory(); toast("Verlauf gelöscht"); };
+
+input.value = SAMPLE;
+updateCount();
+</script>
